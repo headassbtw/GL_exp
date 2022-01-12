@@ -80,7 +80,7 @@ Engine::GameObject Engine::Game::Find(const char* name){
 		}
 	}
 }
-
+Engine::Game::Game(){} //NEVER USE THIS
 Engine::Game::Game(const char* title, int width, int height){
 	Camera = Render::Camera();
 	Height = height;
@@ -130,8 +130,7 @@ Engine::Game::Game(const char* title, int width, int height){
 	// Accept fragment if it closer to the camera than the former one
 	glDepthFunc(GL_LESS); 
 
-	// Cull triangles which normal is not towards the camera
-	//glEnable(GL_CULL_FACE);
+	
 
     Engine::Filesystem::Textures::LoadSauce(); //load in the missing texture
 	BindBuffers(_vertexBuffer, _uvBuffer, _normalBuffer);
@@ -203,29 +202,51 @@ void Engine::Game::UpdateMeshes(){ //like ProcessMeshes but only for the meshes 
     }
 }
 
+void Engine::Game::DrawObject(int object,glm::mat4& modelmatrix, glm::mat4& mvp){
+	SetShader(Objects[object].mesh.Shader);
+	if(Objects[object].mesh.CullBackface){
+		glEnable(GL_CULL_FACE);
+	}
+	else{
+		glDisable(GL_CULL_FACE);
+	}
+	glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &mvp[0][0]);
+	glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &modelmatrix[0][0]);
+	glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &ViewMatrix[0][0]);
+	glUniform3f(LightID, lightPos.x, lightPos.y, lightPos.z);
 
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, Objects[object].mesh.Texture);
+
+	glUniform1i(TextureID, 0);
+	glDrawArrays(GL_TRIANGLES, Objects[object].mesh.vbuffer_start, Objects[object].mesh.vbuffer_end - Objects[object].mesh.vbuffer_start);
+}
 
 int Engine::Game::Render()
 {
 	glfwPollEvents();
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_DEPTH_BUFFER_BIT);
 		
 
 		
 
-		/*ProjectionMatrix = glm::perspective(glm::radians(Camera.FOV), 16.0f / 9.0f, Camera.NearClip, Camera.FarClip);
+		ProjectionMatrix = glm::perspective(glm::radians(Camera.FOV), 16.0f / 9.0f, Camera.NearClip, Camera.FarClip);
+		glm::mat4 ModelMatrix = glm::mat4(1.0);
 		ViewMatrix       = glm::lookAt(
 								Camera.Position,           // Camera is here
 								Camera.Position+Camera.Rotation, // and looks here : at the same position, plus "direction"
 								glm::vec3(0,1,0)                  // Head is up (set to 0,-1,0 to look upside-down)
-						   );*/
-
+						   );
+		
+		
 
 		
-		glm::mat4 ProjectionMatrix = Game::ProjectionMatrix;
-		glm::mat4 ViewMatrix = Game::ViewMatrix;
-		glm::mat4 ModelMatrix = glm::mat4(1.0);
+		//glm::mat4 ProjectionMatrix = Game::ProjectionMatrix;
+		//glm::mat4 ViewMatrix = Game::ViewMatrix;
+		
 		glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
+		
+		
 
 
 		glEnableVertexAttribArray(0);
@@ -262,22 +283,29 @@ int Engine::Game::Render()
 		);
         glBufferData(GL_ARRAY_BUFFER, _normalBuffer.size() * sizeof(glm::vec3), &_normalBuffer[0], GL_DYNAMIC_DRAW);
 
-		
-		
-        for(int i = 0; i < Objects.size();i++){
-            SetShader(Objects[i].mesh.Shader);
-
-            glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
-		    glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
-		    glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &ViewMatrix[0][0]);
-		    glUniform3f(LightID, lightPos.x, lightPos.y, lightPos.z);
-
-            glActiveTexture(GL_TEXTURE0);
-		    glBindTexture(GL_TEXTURE_2D, Objects[i].mesh.Texture);
-		
-		    glUniform1i(TextureID, 0);
-            glDrawArrays(GL_TRIANGLES, Objects[i].mesh.vbuffer_start, Objects[i].mesh.vbuffer_end - Objects[i].mesh.vbuffer_start);
+		if(RenderSkybox){
+			glm::mat4 ViewMatrix2   = glm::lookAt(
+								glm::vec3(0),
+								Camera.Rotation,
+								glm::vec3(0,1,0)
+						   );
+		glm::mat4 MVP2 = ProjectionMatrix * ViewMatrix2 * ModelMatrix;
+			DrawObject(0, ModelMatrix, MVP2);
+			glClear(GL_DEPTH_BUFFER_BIT);
+		}
+        for(int i = 2; i < Objects.size();i++){
+            DrawObject(i, ModelMatrix, MVP);
         }
+		if(RenderAxisHelper){
+			glm::mat4 ViewMatrix3   = glm::lookAt(
+			glm::vec3(-2) * Camera.Rotation,           // Camera is here
+			glm::vec3(0), // and looks here : at the same position, plus "direction"
+			glm::vec3(0,1,0)                  // Head is up (set to 0,-1,0 to look upside-down)
+		);
+		glm::mat4 MVP3 = ProjectionMatrix * ViewMatrix3 * ModelMatrix;
+			glClear(GL_DEPTH_BUFFER_BIT);
+			DrawObject(1, ModelMatrix, MVP3);
+		}
 
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);

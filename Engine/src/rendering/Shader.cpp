@@ -1,8 +1,12 @@
 #include "content/filesystem.hpp"
 #include <rendering/Shader.hpp>
 #include <string>
+#include <map>
+std::map<const char*, GLuint> FragStore;
+std::map<const char*, GLuint> VertStore;
+std::map<const char*, GLuint> ProgStore;
 GLint log_length, success;
-GLuint Engine::Render::Shaders::CreateFrag(const char *path){
+GLuint Engine::Render::Shaders::CompileFrag(const char *path){
     GLuint rtnShader;
     std::string ShaderSource = Engine::Filesystem::Text(path);
     const char* ShaderSourcePointer = ShaderSource.c_str();
@@ -24,7 +28,7 @@ GLuint Engine::Render::Shaders::CreateFrag(const char *path){
     printf("Compiled fragment shader \"%s\"\n",path);
     return rtnShader;
 }
-GLuint Engine::Render::Shaders::CreateVert(const char *path){
+GLuint Engine::Render::Shaders::CompileVert(const char *path){
     GLuint rtnShader;
     std::string ShaderSource = Engine::Filesystem::Text(path);
     const char* ShaderSourcePointer = ShaderSource.c_str();
@@ -46,16 +50,28 @@ GLuint Engine::Render::Shaders::CreateVert(const char *path){
     return rtnShader;
 }
 
+GLuint Engine::Render::Shaders::GetFrag(const char *path){
+    if(!FragStore.contains(path)){
+        FragStore[path] = CompileFrag(path);
+    }
+    return FragStore[path];
+}
+
+GLuint Engine::Render::Shaders::GetVert(const char *path){
+    if(!VertStore.contains(path)){
+        VertStore[path] = CompileVert(path);
+    }
+    return VertStore[path];
+}
 
 
-GLuint Engine::Render::Shaders::GetShaders(const char* vert, const char* frag) {
+
+GLuint Engine::Render::Shaders::CompileShaders(GLuint vert, GLuint frag) {
     GLuint  program;
     
-    GLuint vertex_shader = Shaders::CreateVert(vert);
-    GLuint master_fragment = Shaders::CreateFrag(frag);
     program = glCreateProgram();
-    glAttachShader(program, vertex_shader);
-    glAttachShader(program, master_fragment);
+    glAttachShader(program, vert);
+    glAttachShader(program, frag);
     glLinkProgram(program);
     
     glGetProgramiv(program, GL_LINK_STATUS, &success);
@@ -70,7 +86,14 @@ GLuint Engine::Render::Shaders::GetShaders(const char* vert, const char* frag) {
     if (!success) {
         exit(EXIT_FAILURE);
     }
-    glDeleteShader(vertex_shader);
-    glDeleteShader(master_fragment);
+    glDeleteShader(vert);
+    glDeleteShader(frag);
     return program;
+}
+
+GLuint Engine::Render::Shaders::GetShaders(const char* vert,const char* frag){
+    if(!ProgStore.contains(frag)){
+        ProgStore[frag] = CompileShaders(GetVert(vert), GetFrag(frag));
+    }
+    return ProgStore[frag];
 }

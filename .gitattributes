@@ -1,2 +1,3 @@
 CMakeModules/** linguist-vendored
+external/include/** linguist-vendored
 CMakeLists.txt linguist-documentation

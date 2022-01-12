@@ -2,7 +2,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-
+#include <map>
+std::map<const char*, GLuint> TextureStore;
 
 
 #define FOURCC_DXT1 0x31545844 // Equivalent to "DXT1" in ASCII
@@ -115,6 +116,11 @@ GLuint Engine::Filesystem::Textures::LoadSauce(){
 }
 
 GLuint Engine::Filesystem::Textures::LoadDDS(const char *path){
+	if(TextureStore.contains(path)){
+		return TextureStore[path];
+	}
+
+
     unsigned char header[124];
 	printf("loading texture \"%s\"\n",path);
 	FILE *fp; 
@@ -196,6 +202,7 @@ GLuint Engine::Filesystem::Textures::LoadDDS(const char *path){
 	} 
 
 	free(buffer); 
+	TextureStore[path] = textureID;
 	printf("loaded texture in slot %u\n",textureID);
 	return textureID;
 }

@@ -11,6 +11,8 @@ namespace Engine{
         GLFWwindow* window;
         float Width;
         float Height;
+        bool RenderSkybox = true;
+        bool RenderAxisHelper = true;
         Render::Camera Camera;
         void ResizeCallback(GLFWwindow* window, int width, int height);
         private:
@@ -20,13 +22,14 @@ namespace Engine{
         
         public:
         GameObject Find(const char* name);
+        Game(); //NEVER USE THIS
         Game(const char* title, int width, int height);
         glm::mat4 ViewMatrix;  
         glm::mat4 ProjectionMatrix;
         std::vector<GameObject> Objects;
         void ProcessMeshes();
         void UpdateMeshes();
-
+        void DrawObject(int object,glm::mat4& modelmatrix, glm::mat4& mvp);
         int Render();
     };
 }

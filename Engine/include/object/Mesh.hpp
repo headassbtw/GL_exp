@@ -22,6 +22,7 @@ namespace Engine{
         std::vector<glm::vec2> p_UVBuffer;
         std::vector<glm::vec3> p_NormalBuffer;
         public:
+        bool CullBackface;
         bool NeedsRenderUpdate;
         void FlagForUpdate();
         void ApplyTransform(Engine::Transform transform);
