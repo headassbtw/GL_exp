@@ -7,6 +7,9 @@
 Engine::Mesh::Mesh(){
 
 }
+void Engine::Mesh::FlagForUpdate(){
+    NeedsRenderUpdate = true;
+}
 void Engine::Mesh::ApplyTransform(Engine::Transform transform){
     VertexBuffer.resize(p_VertexBuffer.size());
     for(int i = 0; i < p_VertexBuffer.size(); i++){
@@ -32,6 +35,7 @@ void Engine::Mesh::ApplyTransform(Engine::Transform transform){
         tmp += transform.Position;
         NormalBuffer[i] = tmp;
     }
+    NeedsRenderUpdate = true;
 }
 
 Engine::Mesh::Mesh(const char* modelpath){

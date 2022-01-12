@@ -1,10 +1,10 @@
 #include <GL/glew.h>
-#include "Game.hpp"
-#include "content/filesystem.hpp"
-#include "content/textures.hpp"
-#include "object/Mesh.hpp"
-#include "object/Transform.hpp"
-#include "rendering/Shader.hpp"
+#include <Game.hpp>
+#include <content/filesystem.hpp>
+#include <content/textures.hpp>
+#include <object/Mesh.hpp>
+#include <object/Transform.hpp>
+#include <rendering/Shader.hpp>
 #include <GLFW/glfw3.h>
 #include <glm/common.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
@@ -16,6 +16,8 @@
 #include <vector>
 #include <glm/glm.hpp>
 #include <object/GameObject.hpp>
+#include <thread>
+#include <chrono>
 Engine::Game game = Engine::Game("Hello!",1600,900);
 
 
@@ -43,6 +45,9 @@ void computeMatricesFromInputs(){
 	// Compute time difference between current and last frame
 	double currentTime = glfwGetTime();
 	float deltaTime = float(currentTime - lastTime);
+	
+	std::this_thread::sleep_for(std::chrono::nanoseconds(3)); //lmao
+	
 
 	// Get mouse position
 	double xpos, ypos;
@@ -91,18 +96,17 @@ void computeMatricesFromInputs(){
 		position -= right * deltaTime * speed;
 	}
 
-	
-	game.Objects[2].transform.Rotation = direction;
-    game.Objects[2].mesh.ApplyTransform(game.Objects[2].transform);
 
-	
+	if (glfwGetKey( game.window, GLFW_KEY_Z ) == GLFW_PRESS){
+		game.Objects[1].transform.Position.y += 0.05f;
+		game.Objects[1].mesh.FlagForUpdate();
+    	//game.Objects[1].mesh.ApplyTransform(game.Objects[1].transform);
+	}
 
-	float FoV = initialFoV;
-
-	game.ProjectionMatrix = glm::perspective(glm::radians(FoV), 16.0f / 9.0f, 0.1f, 100.0f);
+	game.ProjectionMatrix = glm::perspective(glm::radians(game.Camera.FOV), 16.0f / 9.0f, game.Camera.NearClip, game.Camera.FarClip);
 	
     game.Objects[0].transform.Position = position;
-    game.Objects[0].mesh.ApplyTransform(game.Objects[0].transform);
+    game.Objects[0].mesh.FlagForUpdate();
 	game.ViewMatrix       = glm::lookAt(
 								position,           // Camera is here
 								position+direction, // and looks here : at the same position, plus "direction"
@@ -111,58 +115,66 @@ void computeMatricesFromInputs(){
 
 	lastTime = currentTime;
 }
+
+
+void constupdate(){
+	
+	do{
+        computeMatricesFromInputs();
+    }
+    while( glfwGetKey(game.window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
+            glfwWindowShouldClose(game.window) == 0 );
+}
+void constupdate2(){
+	
+	do{
+		game.UpdateMeshes();
+    }
+    while( glfwGetKey(game.window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
+            glfwWindowShouldClose(game.window) == 0 );
+}
+
 int main(){
 	#pragma region skybox
     Engine::Test::Hello();
     auto skybox = Engine::GameObject();
     skybox.mesh = Engine::Mesh("content/models/skybox.obj");
-    skybox.transform.Scale = glm::vec3(10);
-    skybox.mesh.ApplyTransform(skybox.transform);
+    skybox.transform.Scale = glm::vec3(1000);
+    skybox.mesh.FlagForUpdate();
     skybox.mesh.Shader = Engine::Render::Shaders::GetShaders( "content/shaders/vert.glsl", "content/shaders/frag_unlit.glsl" );
     skybox.mesh.Texture = Engine::Filesystem::Textures::LoadDDS("content/textures/skybox.dds");
 	game.Objects.push_back(skybox);
 	#pragma endregion
 
-    auto ass2 = Engine::GameObject();
-    ass2.mesh = Engine::Mesh("content/models/cube.obj");
-    ass2.transform.Position = glm::vec3(-3,0,0);
-    ass2.mesh.ApplyTransform(ass2.transform);
-    ass2.mesh.Shader = Engine::Render::Shaders::GetShaders( "content/shaders/vert.glsl", "content/shaders/frag_lit.glsl" );
-    ass2.mesh.Texture = Engine::Filesystem::Textures::LoadDDS("content/textures/coob.dds");
+	auto shad = Engine::Render::Shaders::GetShaders( "content/shaders/vert.glsl", "content/shaders/frag_lit.glsl" );
 
 	auto ass = Engine::GameObject();
     ass.mesh = Engine::Mesh("content/models/cube.obj");
     ass.transform.Position = glm::vec3(0);
-    ass.mesh.ApplyTransform(ass.transform);
-    ass.mesh.Shader = Engine::Render::Shaders::GetShaders( "content/shaders/vert.glsl", "content/shaders/frag_lit.glsl" );
-    ass.mesh.Texture = Engine::Filesystem::Textures::LoadDDS("content/textures/hell.dds");
+    ass.mesh.FlagForUpdate();
+    ass.mesh.Shader = shad;
+    ass.mesh.Texture = Engine::Filesystem::Textures::LoadDDS("content/textures/no.dds");
 
-auto shad = Engine::Render::Shaders::GetShaders( "content/shaders/vert.glsl", "content/shaders/frag_lit.glsl" );
-
-	for(int i = 0; i < 53; i++){
-
-    auto ass3 = Engine::GameObject();
-    ass3.mesh = Engine::Mesh("content/models/cube.obj");
-    ass3.transform.Position = glm::vec3(3*i,0,0);
-    ass3.mesh.ApplyTransform(ass3.transform);
-    ass3.mesh.Shader = shad;
-    ass3.mesh.Texture = Engine::Filesystem::Textures::LoadDDS("content/textures/pong.dds");
-	game.Objects.push_back(ass3);
-	}
 
     
     game.Objects.push_back(ass);
-    game.Objects.push_back(ass2);
-    
+    game.Camera.FarClip = 3000.0f;
+	game.ProcessMeshes();
 
+
+
+	std::thread update_thread(constupdate);
+	std::thread update_2thread(constupdate2);
+	
     do{
-        computeMatricesFromInputs();
-		glViewport(0,0,game.Width,game.Height);
+        
+		//computeMatricesFromInputs();
         game.Render();
     }
     while( glfwGetKey(game.window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
             glfwWindowShouldClose(game.window) == 0 );
-
+	update_thread.join();
+	update_2thread.join();
     
     std::cout << "hi from game" << std::endl;
     return 0;

@@ -25,6 +25,7 @@ namespace Engine{
         glm::mat4 ProjectionMatrix;
         std::vector<GameObject> Objects;
         void ProcessMeshes();
+        void UpdateMeshes();
 
         int Render();
     };

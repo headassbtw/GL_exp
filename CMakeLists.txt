@@ -23,4 +23,4 @@ add_executable(gl_exp ${SRC})
 
 
 
-target_link_libraries(gl_exp Engine glfw OpenGL ${GLFW_LIBRARIES} GLEW)
+target_link_libraries(gl_exp Engine pthread glfw OpenGL ${GLFW_LIBRARIES} GLEW)

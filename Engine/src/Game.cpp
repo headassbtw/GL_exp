@@ -1,4 +1,4 @@
-#include "content/filesystem.hpp"
+#include <content/filesystem.hpp>
 
 #include "rendering/Camera.hpp"
 #include "rendering/Shader.hpp"
@@ -150,7 +150,6 @@ void Engine::Game::ProcessMeshes(){
     std::vector<glm::vec3> tmp_v;
     std::vector<glm::vec2> tmp_u;
     std::vector<glm::vec3> tmp_n;
-    int aaa = 0;
     for(int i = 0; i < Game::Objects.size();i++){
         auto a = Objects[i];
         Objects[i].mesh.vbuffer_start = tmp_v.size();
@@ -158,13 +157,16 @@ void Engine::Game::ProcessMeshes(){
             tmp_v.push_back(a.mesh.VertexBuffer[j]);
         }
         Objects[i].mesh.vbuffer_end = tmp_v.size();
-        aaa = tmp_v.size();
+		Objects[i].mesh.ubuffer_start = tmp_u.size();
         for(int j = 0; j < a.mesh.UVBuffer.size();j++){
             tmp_u.push_back(a.mesh.UVBuffer[j]);
         }
+		Objects[i].mesh.ubuffer_end = tmp_u.size();
+		Objects[i].mesh.nbuffer_start = tmp_n.size();
         for(int j = 0; j < a.mesh.NormalBuffer.size();j++){
             tmp_n.push_back(a.mesh.NormalBuffer[j]);
         }
+		Objects[i].mesh.nbuffer_end = tmp_n.size();
         
     }
     _vertexBuffer.resize(tmp_v.size()); _vertexBuffer.clear();
@@ -180,14 +182,32 @@ void Engine::Game::ProcessMeshes(){
         _normalBuffer.push_back(tmp_n[j]);
     }
 }
-
+void Engine::Game::UpdateMeshes(){ //like ProcessMeshes but only for the meshes that need it (framerate issues go brr)
+	for(int i = 0; i < Game::Objects.size();i++){
+        auto a = Objects[i];
+		if(a.mesh.NeedsRenderUpdate){
+			Objects[i].mesh.ApplyTransform(Objects[i].transform);
+			for(int j = 0; j < a.mesh.VertexBuffer.size();j++){
+				_vertexBuffer[a.mesh.vbuffer_start + j] = (a.mesh.VertexBuffer[j]);
+			}
+			for(int j = 0; j < a.mesh.UVBuffer.size();j++){
+				_uvBuffer[a.mesh.ubuffer_start + j] = (a.mesh.UVBuffer[j]);
+			}
+			for(int j = 0; j < a.mesh.NormalBuffer.size();j++){
+				_normalBuffer[a.mesh.nbuffer_start + j] = (a.mesh.NormalBuffer[j]);
+			}
+			Objects[i].mesh.NeedsRenderUpdate = false;
+		}
+        
+        
+    }
+}
 
 
 
 int Engine::Game::Render()
 {
 	glfwPollEvents();
-    ProcessMeshes();
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
 
