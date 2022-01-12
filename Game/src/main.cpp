@@ -6,9 +6,11 @@
 #include "object/Transform.hpp"
 #include "rendering/Shader.hpp"
 #include <GLFW/glfw3.h>
+#include <glm/common.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/fwd.hpp>
+#include <glm/trigonometric.hpp>
 #include <iostream>
 #include <test.hpp>
 #include <vector>
@@ -30,7 +32,8 @@ float initialFoV = 90.0f;
 float speed = 3.0f; // 3 units / second
 float mouseSpeed = 0.005f;
 
-
+float verticalMax = glm::radians(90.0f);
+float verticalMin = glm::radians(-90.0f);
 
 void computeMatricesFromInputs(){
 
@@ -46,51 +49,58 @@ void computeMatricesFromInputs(){
 	glfwGetCursorPos(game.window, &xpos, &ypos);
 
 	// Reset mouse position for next frame
-	glfwSetCursorPos(game.window, 1600/2, 900/2);
+	glfwSetCursorPos(game.window, game.Width/2, game.Height/2);
 
-	// Compute new orientation
-	horizontalAngle += mouseSpeed * float(1600/2 - xpos );
-	verticalAngle   += mouseSpeed * float( 900/2 - ypos );
+	
+	horizontalAngle += mouseSpeed * float( game.Width/2 - xpos );
+	verticalAngle   += mouseSpeed * float( game.Height/2 - ypos );
 
-	// Direction : Spherical coordinates to Cartesian coordinates conversion
+	verticalAngle = glm::clamp(verticalAngle, verticalMin,verticalMax);
+
+	
 	glm::vec3 direction(
 		cos(verticalAngle) * sin(horizontalAngle), 
 		sin(verticalAngle),
 		cos(verticalAngle) * cos(horizontalAngle)
 	);
 	
-	// Right vector
+	
 	glm::vec3 right = glm::vec3(
 		sin(horizontalAngle - 3.14f/2.0f), 
 		0,
 		cos(horizontalAngle - 3.14f/2.0f)
 	);
 	
-	// Up vector
+	
 	glm::vec3 up = glm::cross( right, direction );
 
-	// Move forward
+	
 	if (glfwGetKey( game.window, GLFW_KEY_W ) == GLFW_PRESS){
 		position += direction * deltaTime * speed;
 	}
-	// Move backward
+	
 	if (glfwGetKey( game.window, GLFW_KEY_S ) == GLFW_PRESS){
 		position -= direction * deltaTime * speed;
 	}
-	// Strafe right
+	
 	if (glfwGetKey( game.window, GLFW_KEY_D ) == GLFW_PRESS){
 		position += right * deltaTime * speed;
 	}
-	// Strafe left
+	
 	if (glfwGetKey( game.window, GLFW_KEY_A ) == GLFW_PRESS){
 		position -= right * deltaTime * speed;
 	}
 
-	float FoV = initialFoV;// - 5 * glfwGetMouseWheel(); // Now GLFW 3 requires setting up a callback for this. It's a bit too complicated for this beginner's tutorial, so it's disabled instead.
+	
+	game.Objects[2].transform.Rotation = direction;
+    game.Objects[2].mesh.ApplyTransform(game.Objects[2].transform);
 
-	// Projection matrix : 45� Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units
+	
+
+	float FoV = initialFoV;
+
 	game.ProjectionMatrix = glm::perspective(glm::radians(FoV), 16.0f / 9.0f, 0.1f, 100.0f);
-	// Camera matrix
+	
     game.Objects[0].transform.Position = position;
     game.Objects[0].mesh.ApplyTransform(game.Objects[0].transform);
 	game.ViewMatrix       = glm::lookAt(
@@ -102,35 +112,52 @@ void computeMatricesFromInputs(){
 	lastTime = currentTime;
 }
 int main(){
+	#pragma region skybox
     Engine::Test::Hello();
-    auto ass = Engine::GameObject();
-    ass.mesh = Engine::Mesh("content/models/skybox.obj");
-    ass.transform.Scale = glm::vec3(10);
-    ass.mesh.ApplyTransform(ass.transform);
-    ass.mesh.Shader = Engine::Render::Shaders::GetShaders( "content/shaders/vert.glsl", "content/shaders/frag_unlit.glsl" );
-    ass.mesh.Texture = Engine::Filesystem::Textures::LoadDDS("content/textures/skybox.dds");
+    auto skybox = Engine::GameObject();
+    skybox.mesh = Engine::Mesh("content/models/skybox.obj");
+    skybox.transform.Scale = glm::vec3(10);
+    skybox.mesh.ApplyTransform(skybox.transform);
+    skybox.mesh.Shader = Engine::Render::Shaders::GetShaders( "content/shaders/vert.glsl", "content/shaders/frag_unlit.glsl" );
+    skybox.mesh.Texture = Engine::Filesystem::Textures::LoadDDS("content/textures/skybox.dds");
+	game.Objects.push_back(skybox);
+	#pragma endregion
 
     auto ass2 = Engine::GameObject();
     ass2.mesh = Engine::Mesh("content/models/cube.obj");
-    ass2.transform.Position = glm::vec3(0,-3,0);
+    ass2.transform.Position = glm::vec3(-3,0,0);
     ass2.mesh.ApplyTransform(ass2.transform);
     ass2.mesh.Shader = Engine::Render::Shaders::GetShaders( "content/shaders/vert.glsl", "content/shaders/frag_lit.glsl" );
-    ass2.mesh.Texture = Engine::Filesystem::Textures::LoadDDS("content/textures/sauce.dds");
+    ass2.mesh.Texture = Engine::Filesystem::Textures::LoadDDS("content/textures/coob.dds");
+
+	auto ass = Engine::GameObject();
+    ass.mesh = Engine::Mesh("content/models/cube.obj");
+    ass.transform.Position = glm::vec3(0);
+    ass.mesh.ApplyTransform(ass.transform);
+    ass.mesh.Shader = Engine::Render::Shaders::GetShaders( "content/shaders/vert.glsl", "content/shaders/frag_lit.glsl" );
+    ass.mesh.Texture = Engine::Filesystem::Textures::LoadDDS("content/textures/hell.dds");
+
+auto shad = Engine::Render::Shaders::GetShaders( "content/shaders/vert.glsl", "content/shaders/frag_lit.glsl" );
+
+	for(int i = 0; i < 53; i++){
 
     auto ass3 = Engine::GameObject();
     ass3.mesh = Engine::Mesh("content/models/cube.obj");
-    ass3.transform.Position = glm::vec3(0,3,0);
+    ass3.transform.Position = glm::vec3(3*i,0,0);
     ass3.mesh.ApplyTransform(ass3.transform);
-    ass3.mesh.Shader = Engine::Render::Shaders::GetShaders( "content/shaders/vert.glsl", "content/shaders/frag_lit.glsl" );
-    ass3.mesh.Texture = Engine::Filesystem::Textures::LoadDDS("content/textures/spher.dds");
-    
+    ass3.mesh.Shader = shad;
+    ass3.mesh.Texture = Engine::Filesystem::Textures::LoadDDS("content/textures/pong.dds");
+	game.Objects.push_back(ass3);
+	}
 
+    
     game.Objects.push_back(ass);
     game.Objects.push_back(ass2);
-    game.Objects.push_back(ass3);
+    
 
     do{
         computeMatricesFromInputs();
+		glViewport(0,0,game.Width,game.Height);
         game.Render();
     }
     while( glfwGetKey(game.window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&

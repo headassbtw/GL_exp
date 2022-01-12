@@ -1,6 +1,8 @@
 #include "content/filesystem.hpp"
+
 #include "rendering/Camera.hpp"
 #include "rendering/Shader.hpp"
+#include "object/GameObject.hpp"
 #include <content/textures.hpp>
 #include <GL/glew.h>
 #include <GL/gl.h>
@@ -11,14 +13,12 @@
 #include <controls.hpp>
 #include <Game.hpp>
 #include <vector>
+#include <algorithm>
 using namespace glm;
 
 GLuint vertexbuffer;
 GLuint uvbuffer;
 GLuint normalbuffer;
-
-GLuint programID;
-GLuint Texture;
 
 GLuint VertexArrayID;
 GLuint MatrixID;
@@ -27,7 +27,7 @@ GLuint ModelMatrixID;
 GLuint TextureID;
 GLuint LightID;
 glm::vec3 lightPos = glm::vec3(4,4,4);
-
+std::vector<Engine::GameObject> ShaderSorted;
 
 void BindBuffers(std::vector<glm::vec3> vertices,
                  std::vector<glm::vec2> uvs,
@@ -49,17 +49,42 @@ void BindBuffers(std::vector<glm::vec3> vertices,
     glBindBuffer(GL_ARRAY_BUFFER, normalbuffer);
     glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(glm::vec3), &normals[0], GL_DYNAMIC_DRAW);
 }
-
+GLuint lastshader = -122;
 void SetShader(GLuint programID){
-    glUseProgram(programID);
-    MatrixID = glGetUniformLocation(programID, "MVP");
-	ViewMatrixID = glGetUniformLocation(programID, "V");
-	ModelMatrixID = glGetUniformLocation(programID, "M");
-    TextureID  = glGetUniformLocation(programID, "myTextureSampler");
-    LightID = glGetUniformLocation(programID, "LightPosition_worldspace");
+	if(lastshader != programID)
+	{
+		glUseProgram(programID);
+		MatrixID = glGetUniformLocation(programID, "MVP");
+		ViewMatrixID = glGetUniformLocation(programID, "V");
+		ModelMatrixID = glGetUniformLocation(programID, "M");
+		TextureID  = glGetUniformLocation(programID, "myTextureSampler");
+		LightID = glGetUniformLocation(programID, "LightPosition_worldspace");
+	}
+	lastshader = programID;
+}
+
+void Engine::Game::ResizeCallback(GLFWwindow* window, int width, int height){
+	glViewport(0, 0, width, height);
+	printf("Resized to: %dx%d\n",width,height);
+}
+
+bool shaderishigher(Engine::GameObject g, Engine::GameObject gg){
+	return g.mesh.Shader > gg.mesh.Shader;
+}
+
+
+Engine::GameObject Engine::Game::Find(const char* name){
+	for(int i = 0;i < Objects.size();i++){
+		if(Objects[i].name.c_str() == name){
+			return Objects[i];
+		}
+	}
 }
 
 Engine::Game::Game(const char* title, int width, int height){
+	Camera = Render::Camera();
+	Height = height;
+	Width = width;
     if( !glfwInit() )
 	{
 		fprintf( stderr, "Failed to initialize GLFW\n" );
@@ -73,14 +98,14 @@ Engine::Game::Game(const char* title, int width, int height){
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// Open a window and create its OpenGL context
-	window = glfwCreateWindow( 1600, 900, title, NULL, NULL);
+	window = glfwCreateWindow( width, height, title, NULL, NULL);
 	if( window == NULL ){
 		fprintf( stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n" );
 		getchar();
 		glfwTerminate();
 	}
 	glfwMakeContextCurrent(window);
-
+	
 	// Initialize GLEW
 	glewExperimental = true; // Needed for core profile
 	if (glewInit() != GLEW_OK) {
@@ -88,7 +113,6 @@ Engine::Game::Game(const char* title, int width, int height){
 		getchar();
 		glfwTerminate();
 	}
-
 	// Ensure we can capture the escape key being pressed below
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
     // Hide the mouse and enable unlimited mouvement
@@ -96,7 +120,7 @@ Engine::Game::Game(const char* title, int width, int height){
     
     // Set the mouse at the center of the screen
     glfwPollEvents();
-    glfwSetCursorPos(window, 1600/2, 900/2);
+    glfwSetCursorPos(window, Width/2, Height/2);
 
 	// Dark blue background
 	glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
@@ -109,18 +133,16 @@ Engine::Game::Game(const char* title, int width, int height){
 	// Cull triangles which normal is not towards the camera
 	//glEnable(GL_CULL_FACE);
 
-	
-	
+    Engine::Filesystem::Textures::LoadSauce(); //load in the missing texture
+	BindBuffers(_vertexBuffer, _uvBuffer, _normalBuffer);
 
-	programID = Engine::Render::Shaders::GetShaders( "content/shaders/vert.glsl", "content/shaders/frag_lit.glsl" );
-    Texture = Engine::Filesystem::Textures::LoadDDS("content/textures/skybox.dds");
 
-    
-	bool res = Engine::Filesystem::OBJ("content/models/skybox.obj", _vertexBuffer, _uvBuffer, _normalBuffer);
-    if(res) BindBuffers(_vertexBuffer, _uvBuffer, _normalBuffer);
-	
+	for(int i = 0; i < Objects.size();i++){
+		ShaderSorted.push_back(Objects[i]);
+	}
 
-	SetShader(programID);
+	std::sort(Objects.begin(), Objects.end(), shaderishigher);
+
 }
 
 
@@ -161,11 +183,24 @@ void Engine::Game::ProcessMeshes(){
 
 
 
+
 int Engine::Game::Render()
 {
+	glfwPollEvents();
     ProcessMeshes();
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
+
+		
+
+		/*ProjectionMatrix = glm::perspective(glm::radians(Camera.FOV), 16.0f / 9.0f, Camera.NearClip, Camera.FarClip);
+		ViewMatrix       = glm::lookAt(
+								Camera.Position,           // Camera is here
+								Camera.Position+Camera.Rotation, // and looks here : at the same position, plus "direction"
+								glm::vec3(0,1,0)                  // Head is up (set to 0,-1,0 to look upside-down)
+						   );*/
+
+
 		
 		glm::mat4 ProjectionMatrix = Game::ProjectionMatrix;
 		glm::mat4 ViewMatrix = Game::ViewMatrix;
@@ -208,6 +243,7 @@ int Engine::Game::Render()
         glBufferData(GL_ARRAY_BUFFER, _normalBuffer.size() * sizeof(glm::vec3), &_normalBuffer[0], GL_DYNAMIC_DRAW);
 
 		
+		
         for(int i = 0; i < Objects.size();i++){
             SetShader(Objects[i].mesh.Shader);
 
@@ -228,7 +264,7 @@ int Engine::Game::Render()
 		glDisableVertexAttribArray(2);
 
 		glfwSwapBuffers(window);
-		glfwPollEvents();
+		
 }
 
 void Terminate(){

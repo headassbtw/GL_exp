@@ -8,6 +8,7 @@ namespace Engine{
             float FarClip;
             glm::vec3 Position;
             glm::vec3 Rotation;
+            Camera();
         };
     }
 }
