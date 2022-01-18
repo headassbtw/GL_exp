@@ -1,6 +1,6 @@
-#include "ui/text2d.hpp"
 #include <GL/glew.h>
 #include <GL/gl.h>
+#include <ui/hud.hpp>
 #include <Game.hpp>
 #include <content/filesystem.hpp>
 #include <content/textures.hpp>
@@ -193,7 +193,9 @@ int main(){
 
 
 	
-	Engine::UI::Text2D::Init("content/textures/font.dds");
+	HUD::Init("content/textures/font.dds");
+
+	
     do{
         
 		

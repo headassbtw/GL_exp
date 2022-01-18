@@ -3,7 +3,7 @@
 #include "rendering/Camera.hpp"
 #include "rendering/Shader.hpp"
 #include "object/GameObject.hpp"
-#include "ui/text2d.hpp"
+#include <ui/hud.hpp>
 #include <content/textures.hpp>
 #include <GL/glew.h>
 #include <GL/gl.h>
@@ -358,16 +358,23 @@ int Engine::Game::Render()
 		objcount += std::to_string(Objects.size());
 		objcount += " Objects";
 
-		Engine::UI::Text2D::Print(POS.c_str(), 0, 900, 20);
-		Engine::UI::Text2D::Print(ROT.c_str(), 0, 880, 20);
-		Engine::UI::Text2D::Print(objcount.c_str(), 0, 860, 20);
+		
+		HUD::PushSprite("content/textures/suce.dds",0, 0, 400, 400);
+		HUD::PushSprite("content/textures/suce.dds",400, 0, 200, 200);
+		HUD::PushSprite("content/textures/sace.dds",600, 0, 100, 100);
+		HUD::PushSprite("content/textures/suce.dds",600, 100, 50, 50);
+		HUD::PushText("what the FUCK is up", 50, 50, 30);
+		HUD::PushText(POS.c_str(), 0, 900, 20);
+		HUD::PushText(ROT.c_str(), 0, 880, 20);
+		HUD::PushText(objcount.c_str(), 0, 860, 20);
+		HUD::Render();
 
 		glfwSwapBuffers(window);
 		
 }
 
 void Terminate(){
-	Engine::UI::Text2D::Cleanup();
+	HUD::Cleanup();
 	glDeleteBuffers(1, &vertexbuffer);
 	glDeleteBuffers(1, &uvbuffer);
 	glDeleteBuffers(1, &normalbuffer);
