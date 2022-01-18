@@ -1,3 +1,4 @@
+#include "ui/text2d.hpp"
 #include <GL/glew.h>
 #include <GL/gl.h>
 #include <Game.hpp>
@@ -144,7 +145,7 @@ void input(){
 void meshupdate(){
 	
 	do{
-		game.UpdateMeshes();
+		//game.UpdateMeshes();
     }
     while( glfwGetKey(game.window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
             glfwWindowShouldClose(game.window) == 0 );
@@ -158,25 +159,27 @@ int main(){
 		glfwSetInputMode(game.window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 	}
 
+/*
+	auto shad = Engine::Render::Shaders::GetShaders( "content/shaders/vert.glsl", "content/shaders/frag_unlit.glsl" );
+
 	#pragma region skybox
-    Engine::Test::Hello();
     auto skybox = Engine::GameObject();
     skybox.mesh = Engine::Mesh("content/models/skybox.obj");
-    skybox.mesh.Shader = Engine::Render::Shaders::GetShaders( "content/shaders/vert.glsl", "content/shaders/frag_unlit.glsl" );
+	skybox.mesh.FlagForUpdate();
+    skybox.mesh.Shader = shad;
     skybox.mesh.Texture = Engine::Filesystem::Textures::LoadDDS("content/textures/skybox.dds");
 	game.Objects.push_back(skybox);
 	#pragma endregion
 
-	auto shad = Engine::Render::Shaders::GetShaders( "content/shaders/vert.glsl", "content/shaders/frag_unlit.glsl" );
 
 	auto coob = Engine::GameObject();
     coob.mesh = Engine::Mesh("content/models/axis.obj");
     coob.mesh.FlagForUpdate();
     coob.mesh.Shader = shad;
     coob.mesh.Texture = Engine::Filesystem::Textures::LoadDDS("content/textures/color.dds");
+    game.Objects.push_back(coob);*/
 
 
-    game.Objects.push_back(coob);
 	Engine::Scripting::Run(game);
 	printf("game has %zu objects\n",game.Objects.size());
     game.Camera.FarClip = 3000.0f;
@@ -190,6 +193,7 @@ int main(){
 
 
 	
+	Engine::UI::Text2D::Init("content/textures/font.dds");
     do{
         
 		

@@ -21,9 +21,9 @@ file(GLOB_RECURSE SRC CONFIGURE_DEPENDS
 file(GLOB_RECURSE E_SRC CONFIGURE_DEPENDS
     "Engine/src/*.cpp"
 )
-add_library(Engine SHARED ${E_SRC})
+add_library(Engine ${E_SRC})
 add_executable(gl_exp ${SRC})
 
-
+add_link_options(squirrel SHARED)
 
 target_link_libraries(gl_exp Engine squirrel sqstdlib pthread glfw OpenGL ${GLFW_LIBRARIES} GLEW)

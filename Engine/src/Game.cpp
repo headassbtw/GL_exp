@@ -3,6 +3,7 @@
 #include "rendering/Camera.hpp"
 #include "rendering/Shader.hpp"
 #include "object/GameObject.hpp"
+#include "ui/text2d.hpp"
 #include <content/textures.hpp>
 #include <GL/glew.h>
 #include <GL/gl.h>
@@ -12,6 +13,7 @@
 #include <GLFW/glfw3.h>
 #include <controls.hpp>
 #include <Game.hpp>
+#include <string>
 #include <vector>
 #include <algorithm>
 using namespace glm;
@@ -26,6 +28,9 @@ GLuint ViewMatrixID;
 GLuint ModelMatrixID;
 GLuint TextureID;
 GLuint LightID;
+
+GLuint VertPos;
+
 glm::vec3 lightPos = glm::vec3(4,4,4);
 std::vector<Engine::GameObject> ShaderSorted;
 
@@ -57,7 +62,8 @@ void SetShader(GLuint programID){
 		MatrixID = glGetUniformLocation(programID, "MVP");
 		ViewMatrixID = glGetUniformLocation(programID, "V");
 		ModelMatrixID = glGetUniformLocation(programID, "M");
-		TextureID  = glGetUniformLocation(programID, "myTextureSampler");
+		VertPos = glGetUniformLocation(programID, "Position");
+		TextureID  = glGetUniformLocation(programID, "textureSampler");
 		LightID = glGetUniformLocation(programID, "LightPosition_worldspace");
 	}
 	lastshader = programID;
@@ -100,29 +106,26 @@ Engine::Game::Game(const char* title, int width, int height){
 	// Open a window and create its OpenGL context
 	window = glfwCreateWindow( width, height, title, NULL, NULL);
 	if( window == NULL ){
-		fprintf( stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n" );
+		fprintf( stderr, "Failed to open GLFW window. Make sure your GPU supports OpenGL 3.3 or above.\n" );
 		getchar();
 		glfwTerminate();
 	}
 	glfwMakeContextCurrent(window);
 	
-	// Initialize GLEW
-	glewExperimental = true; // Needed for core profile
+	glewExperimental = true;
 	if (glewInit() != GLEW_OK) {
 		fprintf(stderr, "Failed to initialize GLEW\n");
 		getchar();
 		glfwTerminate();
 	}
-	// Ensure we can capture the escape key being pressed below
+
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
-    // Hide the mouse and enable unlimited mouvement
+
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     
-    // Set the mouse at the center of the screen
     glfwPollEvents();
     glfwSetCursorPos(window, Width/2, Height/2);
 
-	// Dark blue background
 	glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
 
 	// Enable depth test
@@ -185,7 +188,7 @@ void Engine::Game::UpdateMeshes(){ //like ProcessMeshes but only for the meshes 
 	for(int i = 0; i < Game::Objects.size();i++){
         auto a = Objects[i];
 		if(a.mesh.NeedsRenderUpdate){
-			Objects[i].mesh.ApplyTransform(Objects[i].transform);
+			//Objects[i].mesh.ApplyTransform(Objects[i].transform);
 			for(int j = 0; j < a.mesh.VertexBuffer.size();j++){
 				_vertexBuffer[a.mesh.vbuffer_start + j] = (a.mesh.VertexBuffer[j]);
 			}
@@ -215,6 +218,9 @@ void Engine::Game::DrawObject(int object,glm::mat4& modelmatrix, glm::mat4& mvp)
 	glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &ViewMatrix[0][0]);
 	glUniform3f(LightID, lightPos.x, lightPos.y, lightPos.z);
 
+	auto pos = Objects[object].transform.Position;
+	glUniform3f(VertPos, pos.x, pos.y, pos.z);
+
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, Objects[object].mesh.Texture);
 
@@ -232,19 +238,25 @@ int Engine::Game::Render()
 
 		ProjectionMatrix = glm::perspective(glm::radians(Camera.FOV), 16.0f / 9.0f, Camera.NearClip, Camera.FarClip);
 		glm::mat4 ModelMatrix = glm::mat4(1.0);
-		ViewMatrix       = glm::lookAt(
-								Camera.Position,           // Camera is here
-								Camera.Position+Camera.Rotation, // and looks here : at the same position, plus "direction"
-								glm::vec3(0,1,0)                  // Head is up (set to 0,-1,0 to look upside-down)
-						   );
+		ViewMatrix = glm::lookAt(
+							Camera.Position,           // Camera is here
+							Camera.Position+Camera.Rotation, // and looks here : at the same position, plus "direction"
+							glm::vec3(0,1,0)                  // Head is up (set to 0,-1,0 to look upside-down)
+						);
+		glm::mat4 Follow = glm::lookAt(
+			glm::vec3(0),           // Camera is here
+			Camera.Rotation, // and looks here : at the same position, plus "direction"
+			glm::vec3(0,1,0)                  // Head is up (set to 0,-1,0 to look upside-down)
+		);
+		glm::mat4 InverseFollow = glm::lookAt(
+			glm::vec3(-2) * Camera.Rotation,           // Camera is here
+			glm::vec3(0), // and looks here : at the same position, plus "direction"
+			glm::vec3(0,1,0)                  // Head is up (set to 0,-1,0 to look upside-down)
+		);
 		
-		
-
-		
-		//glm::mat4 ProjectionMatrix = Game::ProjectionMatrix;
-		//glm::mat4 ViewMatrix = Game::ViewMatrix;
-		
-		glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
+		glm::mat4 MVP_Normal = ProjectionMatrix * ViewMatrix * ModelMatrix;
+		glm::mat4 MVP_Follow = ProjectionMatrix * Follow * ModelMatrix;
+		glm::mat4 MVP_InverseFollow = ProjectionMatrix * InverseFollow * ModelMatrix;
 		
 		
 
@@ -284,39 +296,56 @@ int Engine::Game::Render()
         glBufferData(GL_ARRAY_BUFFER, _normalBuffer.size() * sizeof(glm::vec3), &_normalBuffer[0], GL_DYNAMIC_DRAW);
 
 		if(RenderSkybox){
-			glm::mat4 ViewMatrix2   = glm::lookAt(
-								glm::vec3(0),
-								Camera.Rotation,
-								glm::vec3(0,1,0)
-						   );
-		glm::mat4 MVP2 = ProjectionMatrix * ViewMatrix2 * ModelMatrix;
-			DrawObject(0, ModelMatrix, MVP2);
+			DrawObject(0, ModelMatrix, MVP_Follow);
 			glClear(GL_DEPTH_BUFFER_BIT);
 		}
         for(int i = 2; i < Objects.size();i++){
-            DrawObject(i, ModelMatrix, MVP);
+			glm::mat4 view;
+			switch (Objects[i].follow) {
+				case Engine::Enums::None:
+					view = MVP_Normal;
+				break;
+				case Engine::Enums::Camera:
+					view = MVP_Follow;
+				break;
+				case Engine::Enums::InverseCamera:
+					view = MVP_InverseFollow;
+				break;
+				default:
+					view = MVP_Normal;
+				break;
+			}
+
+
+            DrawObject(i, ModelMatrix, view);
         }
 		if(RenderAxisHelper){
-			glm::mat4 ViewMatrix3   = glm::lookAt(
-			glm::vec3(-2) * Camera.Rotation,           // Camera is here
-			glm::vec3(0), // and looks here : at the same position, plus "direction"
-			glm::vec3(0,1,0)                  // Head is up (set to 0,-1,0 to look upside-down)
-		);
-		glm::mat4 MVP3 = ProjectionMatrix * ViewMatrix3 * ModelMatrix;
+			
 			glClear(GL_DEPTH_BUFFER_BIT);
-			DrawObject(1, ModelMatrix, MVP3);
+			DrawObject(1, ModelMatrix, MVP_InverseFollow);
 		}
 
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
 
+		std::string POS;
+		POS += "(";
+		POS += std::to_string(Camera.Position.x);
+		POS += ",";
+		POS += std::to_string(Camera.Position.y);
+		POS += ",";
+		POS += std::to_string(Camera.Position.z);
+		POS += ")";
+
+		Engine::UI::Text2D::Print(POS.c_str(), 20, 20, 20);
+
 		glfwSwapBuffers(window);
 		
 }
 
 void Terminate(){
-// Cleanup VBO and shader
+	Engine::UI::Text2D::Cleanup();
 	glDeleteBuffers(1, &vertexbuffer);
 	glDeleteBuffers(1, &uvbuffer);
 	glDeleteBuffers(1, &normalbuffer);

@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <scripting/squirrel.hpp>
+#include <object/GameObject.hpp>
 #include <squirrel.h>
 #include <sqstdio.h>
 
@@ -45,8 +46,8 @@ SQInteger move(HSQUIRRELVM vm){
 
 
     help->Objects[obj].transform.Position = glm::vec3(x,y,z);
-    help->Objects[obj].mesh.ApplyTransform(help->Objects[obj].transform);
-    help->Objects[obj].mesh.FlagForUpdate();
+    //help->Objects[obj].mesh.ApplyTransform(help->Objects[obj].transform);
+    //help->Objects[obj].mesh.FlagForUpdate();
 
 
 
@@ -67,8 +68,8 @@ SQInteger rotate(HSQUIRRELVM vm){
 
 
     help->Objects[obj].transform.Rotation = glm::vec3(x,y,z);
-    help->Objects[obj].mesh.ApplyTransform(help->Objects[obj].transform);
-    help->Objects[obj].mesh.FlagForUpdate();
+    //help->Objects[obj].mesh.ApplyTransform(help->Objects[obj].transform);
+    //help->Objects[obj].mesh.FlagForUpdate();
 
     sq_pushinteger(vm,nargs);
     return 1;
@@ -106,26 +107,29 @@ SQInteger setskybox(HSQUIRRELVM vm){
 
 SQInteger spawn(HSQUIRRELVM vm){
     SQInteger nargs = sq_gettop(vm); //number of arguments
+    SQInteger follow;
     const SQChar* objout;
     const SQChar* texout;
     const SQChar* shdout;
-    sq_getstring(vm, 2, &objout);
-    sq_getstring(vm, 3, &texout);
-    sq_getstring(vm, 4, &shdout);
+    sq_getinteger(vm, 2, &follow);
+    sq_getstring(vm, 3, &objout);
+    sq_getstring(vm, 4, &texout);
+    sq_getstring(vm, 5, &shdout);
 
     help->Camera.NearClip = 0.5f;
 
     auto object = Engine::GameObject();
     auto shader = Engine::Render::Shaders::GetShaders( "content/shaders/vert.glsl", shdout );
     object.mesh = Engine::Mesh(objout);
-    object.mesh.FlagForUpdate();
+    object.follow = (Engine::Enums::GameObjectFollowTarget)follow;
+    //object.mesh.FlagForUpdate();
     object.mesh.Shader = shader;
     object.mesh.Texture = Engine::Filesystem::Textures::LoadDDS(texout);
 
 
     int idx = help->Objects.size();
     help->Objects.push_back(object);
-    help->ProcessMeshes();
+    //help->ProcessMeshes();
     sq_pushinteger(vm,idx);
     return 1;
 }
