@@ -2,6 +2,7 @@
 #include <object/GameObject.hpp>
 
 Engine::GameObject::GameObject(){
+    layer = 0;
     transform = Engine::Transform();
 }
 

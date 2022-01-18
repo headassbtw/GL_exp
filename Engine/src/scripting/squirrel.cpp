@@ -108,13 +108,15 @@ SQInteger setskybox(HSQUIRRELVM vm){
 SQInteger spawn(HSQUIRRELVM vm){
     SQInteger nargs = sq_gettop(vm); //number of arguments
     SQInteger follow;
+    SQInteger layer;
     const SQChar* objout;
     const SQChar* texout;
     const SQChar* shdout;
-    sq_getinteger(vm, 2, &follow);
-    sq_getstring(vm, 3, &objout);
-    sq_getstring(vm, 4, &texout);
-    sq_getstring(vm, 5, &shdout);
+    sq_getinteger(vm, 2, &layer);
+    sq_getinteger(vm, 3, &follow);
+    sq_getstring(vm, 4, &objout);
+    sq_getstring(vm, 5, &texout);
+    sq_getstring(vm, 6, &shdout);
 
     help->Camera.NearClip = 0.5f;
 
@@ -122,6 +124,7 @@ SQInteger spawn(HSQUIRRELVM vm){
     auto shader = Engine::Render::Shaders::GetShaders( "content/shaders/vert.glsl", shdout );
     object.mesh = Engine::Mesh(objout);
     object.follow = (Engine::Enums::GameObjectFollowTarget)follow;
+    object.layer = layer;
     //object.mesh.FlagForUpdate();
     object.mesh.Shader = shader;
     object.mesh.Texture = Engine::Filesystem::Textures::LoadDDS(texout);

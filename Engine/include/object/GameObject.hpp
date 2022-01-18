@@ -17,6 +17,7 @@ namespace Engine{
         Transform transform;
         Mesh mesh;
         std::vector<GameObject> children;
+        int layer;
         Enums::GameObjectFollowTarget follow;
         GameObject();
         ~GameObject();

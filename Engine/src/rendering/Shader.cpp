@@ -86,8 +86,8 @@ GLuint Engine::Render::Shaders::CompileShaders(GLuint vert, GLuint frag) {
     if (!success) {
         exit(EXIT_FAILURE);
     }
-    glDeleteShader(vert);
-    glDeleteShader(frag);
+    //glDeleteShader(vert);
+    //glDeleteShader(frag);
     return program;
 }
 

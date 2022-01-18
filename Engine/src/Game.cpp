@@ -74,6 +74,10 @@ void Engine::Game::ResizeCallback(GLFWwindow* window, int width, int height){
 	printf("Resized to: %dx%d\n",width,height);
 }
 
+bool HigherLayer(Engine::GameObject g, Engine::GameObject gg){
+	return g.layer > gg.layer;
+}
+
 bool shaderishigher(Engine::GameObject g, Engine::GameObject gg){
 	return g.mesh.Shader > gg.mesh.Shader;
 }
@@ -143,7 +147,7 @@ Engine::Game::Game(const char* title, int width, int height){
 		ShaderSorted.push_back(Objects[i]);
 	}
 
-	std::sort(Objects.begin(), Objects.end(), shaderishigher);
+	
 
 }
 
@@ -228,10 +232,19 @@ void Engine::Game::DrawObject(int object,glm::mat4& modelmatrix, glm::mat4& mvp)
 	glDrawArrays(GL_TRIANGLES, Objects[object].mesh.vbuffer_start, Objects[object].mesh.vbuffer_end - Objects[object].mesh.vbuffer_start);
 }
 
+bool wireframe = false;
+
 int Engine::Game::Render()
 {
+	struct {
+        bool operator()(Engine::GameObject a, Engine::GameObject b) const { return a.layer < b.layer; }
+    } customLess;
+
+
+	std::sort(Objects.begin(), Objects.end(), customLess);
 	glfwPollEvents();
-	glClear(GL_DEPTH_BUFFER_BIT);
+	glPolygonMode(GL_FRONT_AND_BACK, wireframe ?GL_LINE : GL_FILL);
+	glClear(GL_DEPTH_BUFFER_BIT | wireframe ? GL_COLOR_BUFFER_BIT : GL_DEPTH_BUFFER_BIT);
 		
 
 		
@@ -295,11 +308,8 @@ int Engine::Game::Render()
 		);
         glBufferData(GL_ARRAY_BUFFER, _normalBuffer.size() * sizeof(glm::vec3), &_normalBuffer[0], GL_DYNAMIC_DRAW);
 
-		if(RenderSkybox){
-			DrawObject(0, ModelMatrix, MVP_Follow);
-			glClear(GL_DEPTH_BUFFER_BIT);
-		}
-        for(int i = 2; i < Objects.size();i++){
+		int layer = -200;
+        for(int i = 0; i < Objects.size();i++){
 			glm::mat4 view;
 			switch (Objects[i].follow) {
 				case Engine::Enums::None:
@@ -315,30 +325,42 @@ int Engine::Game::Render()
 					view = MVP_Normal;
 				break;
 			}
-
+			if(Objects[i].layer > layer){
+				glClear(GL_DEPTH_BUFFER_BIT);
+				layer = Objects[i].layer;
+			}
 
             DrawObject(i, ModelMatrix, view);
         }
-		if(RenderAxisHelper){
-			
-			glClear(GL_DEPTH_BUFFER_BIT);
-			DrawObject(1, ModelMatrix, MVP_InverseFollow);
-		}
+		
 
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
 
 		std::string POS;
-		POS += "(";
+		POS += "Pos: (";
 		POS += std::to_string(Camera.Position.x);
 		POS += ",";
 		POS += std::to_string(Camera.Position.y);
 		POS += ",";
 		POS += std::to_string(Camera.Position.z);
 		POS += ")";
+		std::string ROT;
+		ROT += "Rot: (";
+		ROT += std::to_string(Camera.Rotation.x);
+		ROT += ",";
+		ROT += std::to_string(Camera.Rotation.y);
+		ROT += ",";
+		ROT += std::to_string(Camera.Rotation.z);
+		ROT += ")";
+		std::string objcount;
+		objcount += std::to_string(Objects.size());
+		objcount += " Objects";
 
-		Engine::UI::Text2D::Print(POS.c_str(), 20, 20, 20);
+		Engine::UI::Text2D::Print(POS.c_str(), 0, 900, 20);
+		Engine::UI::Text2D::Print(ROT.c_str(), 0, 880, 20);
+		Engine::UI::Text2D::Print(objcount.c_str(), 0, 860, 20);
 
 		glfwSwapBuffers(window);
 		
