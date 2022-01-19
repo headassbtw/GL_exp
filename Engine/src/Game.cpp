@@ -359,15 +359,16 @@ int Engine::Game::Render()
 		objcount += " Objects";
 
 		
-		HUD::PushSprite("content/textures/suce.dds",0, 0, 400, 400);
-		HUD::PushSprite("content/textures/suce.dds",400, 0, 200, 200);
-		HUD::PushSprite("content/textures/sace.dds",600, 0, 100, 100);
-		HUD::PushSprite("content/textures/suce.dds",600, 100, 50, 50);
-		HUD::PushText("what the FUCK is up", 50, 50, 30);
-		HUD::PushText(POS.c_str(), 0, 900, 20);
+		//HUD::PushText("Alpha Build", 1200, 50, 30);
+		/*HUD::PushText(POS.c_str(), 0, 900, 20);
 		HUD::PushText(ROT.c_str(), 0, 880, 20);
-		HUD::PushText(objcount.c_str(), 0, 860, 20);
+		HUD::PushText(objcount.c_str(), 0, 860, 20);*/
+		if(Errors.size() > 0){
+			HUD::PushText("Something is creating script errors", 0, 0, 20);
+		}
+
 		HUD::Render();
+		
 
 		glfwSwapBuffers(window);
 		

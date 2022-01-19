@@ -12,7 +12,8 @@ namespace Engine{
         };
     }
     
-    struct GameObject{
+    class GameObject{
+        public:
         std::string name;
         Transform transform;
         Mesh mesh;

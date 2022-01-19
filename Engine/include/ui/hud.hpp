@@ -12,5 +12,7 @@ namespace Engine::UI::HUD{
     void PushSprite(const char* sprite,float x, float y, float w, float h);
     void PushText(const char * text, int x, int y, int size);
     void Render();
+    void Clear();
     void Cleanup();
+    int CountElements();
 }

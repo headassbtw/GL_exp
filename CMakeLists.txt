@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 3.22)
+set(CMAKE_CXX_STANDARD 20)
+cmake_minimum_required(VERSION 3.4)
 project(gl_exp)
 
-set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules/)
 
 find_package(GLFW REQUIRED)
@@ -21,9 +21,11 @@ file(GLOB_RECURSE SRC CONFIGURE_DEPENDS
 file(GLOB_RECURSE E_SRC CONFIGURE_DEPENDS
     "Engine/src/*.cpp"
 )
-add_library(Engine ${E_SRC})
+
+add_library(Engine SHARED ${E_SRC})
 add_executable(gl_exp ${SRC})
 
+add_link_options(Engine SHARED)
 add_link_options(squirrel SHARED)
 
 target_link_libraries(gl_exp Engine squirrel sqstdlib pthread glfw OpenGL ${GLFW_LIBRARIES} GLEW)

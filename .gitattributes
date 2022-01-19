@@ -1,3 +1,5 @@
 CMakeModules/** linguist-vendored
+external/** linguist-vendored
 external/include/** linguist-vendored
+external/include/sqrat/** linguist-vendored
 CMakeLists.txt linguist-documentation

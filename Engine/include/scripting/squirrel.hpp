@@ -5,6 +5,7 @@ namespace Engine{
         void RunScript(const char* cmd);
         void Run(Engine::Game& game);
         void GiveGame(Engine::Game gam);
+        void Run(const char* script);
         void Terminate();
     }
 }

@@ -119,17 +119,6 @@ void computeMatricesFromInputs(){
     //game.Objects[1].transform.Position = position + (direction * glm::vec3(1.5f));
 	game.Camera.Position = position;
 	game.Camera.Rotation = direction;
-    
-    //game.Objects[1].mesh.FlagForUpdate();
-
-	//i've moved this to the engine, but i'm keeping it here just in case
-
-	/*game.ViewMatrix       = glm::lookAt(
-								position,           // Camera is here
-								position+direction, // and looks here : at the same position, plus "direction"
-								up                  // Head is up (set to 0,-1,0 to look upside-down)
-						   );
-*/
 	lastTime = currentTime;
 }
 
@@ -137,7 +126,11 @@ void computeMatricesFromInputs(){
 void input(){
 	
 	do{
+		auto start = std::chrono::high_resolution_clock::now();
         computeMatricesFromInputs();
+		auto finish = std::chrono::high_resolution_clock::now();
+		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(finish-start);
+		game.InputThreadMs = ms.count();
     }
     while( glfwGetKey(game.window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
             glfwWindowShouldClose(game.window) == 0 );
@@ -145,10 +138,20 @@ void input(){
 void meshupdate(){
 	
 	do{
-		//game.UpdateMeshes();
+		if(game.Errors.size() >= 1)
+			game.Errors.pop_back();
+		std::this_thread::sleep_for(std::chrono::seconds(3));
     }
     while( glfwGetKey(game.window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
             glfwWindowShouldClose(game.window) == 0 );
+}
+void squirrelupdate(){
+	
+	auto start = std::chrono::high_resolution_clock::now();
+	Engine::Scripting::Run("update.nut");
+	auto finish = std::chrono::high_resolution_clock::now();
+	auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(finish-start);
+	game.ScriptThreadMs = ms.count();
 }
 
 int main(){
@@ -159,28 +162,9 @@ int main(){
 		glfwSetInputMode(game.window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 	}
 
-/*
-	auto shad = Engine::Render::Shaders::GetShaders( "content/shaders/vert.glsl", "content/shaders/frag_unlit.glsl" );
-
-	#pragma region skybox
-    auto skybox = Engine::GameObject();
-    skybox.mesh = Engine::Mesh("content/models/skybox.obj");
-	skybox.mesh.FlagForUpdate();
-    skybox.mesh.Shader = shad;
-    skybox.mesh.Texture = Engine::Filesystem::Textures::LoadDDS("content/textures/skybox.dds");
-	game.Objects.push_back(skybox);
-	#pragma endregion
-
-
-	auto coob = Engine::GameObject();
-    coob.mesh = Engine::Mesh("content/models/axis.obj");
-    coob.mesh.FlagForUpdate();
-    coob.mesh.Shader = shad;
-    coob.mesh.Texture = Engine::Filesystem::Textures::LoadDDS("content/textures/color.dds");
-    game.Objects.push_back(coob);*/
-
-
+	HUD::Init("content/textures/font.dds");
 	Engine::Scripting::Run(game);
+	
 	printf("game has %zu objects\n",game.Objects.size());
     game.Camera.FarClip = 3000.0f;
 	game.ProcessMeshes();
@@ -190,16 +174,19 @@ int main(){
 	game.Objects[0].mesh.FlagForUpdate();
 	std::thread mesh_update_thread(meshupdate);
 	
+	
 
 
 	
-	HUD::Init("content/textures/font.dds");
 
 	
     do{
-        
-		
-        game.Render();
+		squirrelupdate();
+		auto start = std::chrono::high_resolution_clock::now();
+        game.Render(); 
+		auto finish = std::chrono::high_resolution_clock::now();
+		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(finish-start);
+		game.RenderThreadMs = ms.count();
     }
     while( glfwGetKey(game.window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
             glfwWindowShouldClose(game.window) == 0 );

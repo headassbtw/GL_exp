@@ -1,4 +1,5 @@
 #include <content/textures.hpp>
+#include <GL/gl.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -108,6 +109,10 @@ GLuint Engine::Filesystem::Textures::LoadSauce(){
 		if(height < 1) height = 1;
 
 	} 
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
 	free(buffer); 
 	printf("loaded fallback texture in slot %u\n",textureID);
@@ -191,6 +196,7 @@ GLuint Engine::Filesystem::Textures::LoadDDS(const char *path){
 		unsigned int size = ((width+3)/4)*((height+3)/4)*blockSize; 
 		glCompressedTexImage2D(GL_TEXTURE_2D, level, format, width, height,  
 			0, size, buffer + offset); 
+			
 	 
 		offset += size; 
 		width  /= 2; 
@@ -198,8 +204,15 @@ GLuint Engine::Filesystem::Textures::LoadDDS(const char *path){
 
 		if(width < 1) width = 1;
 		if(height < 1) height = 1;
+		
+
 
 	} 
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glGenerateMipmap(GL_TEXTURE_2D);
 
 	free(buffer); 
 	TextureStore[path] = textureID;

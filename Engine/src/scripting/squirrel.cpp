@@ -1,3 +1,13 @@
+#include <scripting/bindings/vec3.hpp>
+#include <scripting/bindings/transform.hpp>
+#include <scripting/bindings/rendercamera.hpp>
+#include <scripting/bindings/gameobject.hpp>
+#include <scripting/bindings/game.hpp>
+#include <scripting/bindings/hud.hpp>
+#include "sqext.hpp"
+#include "sqrat/sqratClass.h"
+#include "sqrat/sqratTable.h"
+#include "sqrat/sqratUtil.h"
 #include <rendering/Shader.hpp>
 #include <content/textures.hpp>
 #include <Game.hpp>
@@ -9,6 +19,7 @@
 #include <object/GameObject.hpp>
 #include <squirrel.h>
 #include <sqstdio.h>
+#include <sqrat.h>
 
 Engine::Game* help;
 HSQUIRRELVM sq_vm;
@@ -20,6 +31,19 @@ void printfunc(HSQUIRRELVM v, const SQChar *s,...)
 
             const char* ass = va_arg(listargs, const char*);
                 printf("%s\n", ass); 
+                va_end(listargs);
+        } 
+
+void errfunc(HSQUIRRELVM v, const SQChar *s,...) 
+        {
+            va_list listargs;
+            va_start(listargs, s);
+
+            const char* ass = va_arg(listargs, const char*);
+                std::string err = std::string("[ERROR] ");
+                err += ass;
+                printf("%s\n", err.c_str()); 
+                help->Errors.push_front(err);
                 va_end(listargs);
         } 
 
@@ -105,6 +129,30 @@ SQInteger setskybox(HSQUIRRELVM vm){
     return 1;
 }
 
+class EngineSpawn{
+        public:
+        Engine::GameObject Spawn(int layer, int camfollow, const char* objfile,const char* texfile,const char* shaderfile){
+                help->Camera.NearClip = 0.5f;
+
+                auto object = Engine::GameObject();
+                auto shader = Engine::Render::Shaders::GetShaders( "content/shaders/vert.glsl", shaderfile );
+                object.mesh = Engine::Mesh(objfile);
+                object.follow = (Engine::Enums::GameObjectFollowTarget)camfollow;
+                object.layer = layer;
+                //object.mesh.FlagForUpdate();
+                object.mesh.Shader = shader;
+                object.mesh.Texture = Engine::Filesystem::Textures::LoadDDS(texfile);
+
+                return object;
+        }
+        int Register(Engine::GameObject obj){
+                int idx = help->Objects.size();
+                help->Objects.push_back(obj);
+                return idx;
+        }
+};
+
+
 SQInteger spawn(HSQUIRRELVM vm){
     SQInteger nargs = sq_gettop(vm); //number of arguments
     SQInteger follow;
@@ -138,60 +186,7 @@ SQInteger spawn(HSQUIRRELVM vm){
 }
 
 
-SQInteger func(HSQUIRRELVM vm){
-    SQInteger nargs = sq_gettop(vm); //number of arguments
-        for(SQInteger n=1;n<=nargs;n++)
-        {
-            
-                printf("arg %d is ",n);
-                switch(sq_gettype(vm,n))
-                {
-                case OT_NULL:
-                        printf("null");
-                        break;
-                case OT_INTEGER:
-                        printf("integer");
-                        break;
-                case OT_FLOAT:
-                        printf("float");
-                        break;
-                case OT_STRING:
-                        printf("string");
-                        const SQChar* ass;
-                        sq_getstring(vm, n, &ass);
-                        printf("%s", ass);
-                        break;
-                case OT_TABLE:
-                        printf("table");
-                        break;
-                case OT_ARRAY:
-                        printf("array");
-                        break;
-                case OT_USERDATA:
-                        printf("userdata");
-                        break;
-                case OT_CLOSURE:
-                        printf("closure(function)");
-                        break;
-                case OT_NATIVECLOSURE:
-                        printf("native closure(C function)");
-                        break;
-                case OT_GENERATOR:
-                        printf("generator");
-                        break;
-                case OT_USERPOINTER:
-                        printf("userpointer");
-                        break;
-                default:
-                        return sq_throwerror(vm,"invalid param"); //throws an exception
-                }
-        printf("\n");
-        }
 
-
-        sq_pushinteger(vm,nargs);
-        return 1;
-}
 
  void Engine::Scripting::RunScript(const char* cmd)
  {
@@ -201,28 +196,81 @@ SQInteger func(HSQUIRRELVM vm){
     sq_call(sq_vm,1,1,0);
  }
 
+class Hello{
+        public:
+        const char* val;
+};
+
+class ScriptingClass{
+        public:
+        int hi;
+        void hello(){printf("squirrel binding!");}
+        Hello sup(){
+                auto a = Hello();
+                a.val = "POGGER\n";
+                return a;
+        }
+};
+
+const char* classname = "ScriptingClass";
+
+Engine::Game hi(){
+        return *help;
+}
+
 void Engine::Scripting::Run(Engine::Game& game){
 
     help = &game;
     sq_vm = sq_open(1024);
-    
-    sq_setprintfunc(sq_vm, printfunc, NULL);
+    sq_setprintfunc(sq_vm, printfunc, errfunc);
     sq_seterrorhandler(sq_vm);
+    Sqrat::DefaultVM::Set(sq_vm);
     
 
 
     sq_pushroottable(sq_vm);
 
-    register_global_func(sq_vm, ::func, "test");
+
+    
     register_global_func(sq_vm, ::spawn, "engine_spawn");
     register_global_func(sq_vm, ::setskybox, "cl_showsky");
     register_global_func(sq_vm, ::move, "engine_move");
     register_global_func(sq_vm, ::rotate, "engine_rotate");
     register_global_func(sq_vm, ::scale, "engine_scale");
 
+        Sqrat::Table aTable(sq_vm);
+        aTable.Func("GetGame", &hi);
+        Sqrat::RootTable(sq_vm).Bind("Constants", aTable);
+
+        Sqrat::Class<ScriptingClass> aClass(sq_vm, "ScriptingClass");
+        Sqrat::Class<EngineSpawn> eClass(sq_vm, "EngineSpawn");
+
+        Sqrat::Class<Hello> bClass(sq_vm, "Hello");
+        bClass.Var("val", &Hello::val);
+        aClass.Func("hello", &ScriptingClass::hello);
+        aClass.Func("sup", &ScriptingClass::sup);
+        aClass.Var("hi", &ScriptingClass::hi);
+        
+        eClass.Func("Spawn", &EngineSpawn::Spawn);
+        eClass.Func("Register", &EngineSpawn::Register);
+
+        Sqrat::RootTable(sq_vm).Bind("Hello", bClass);
+        Sqrat::RootTable(sq_vm).Bind("EngineSpawn", eClass);
+        Sqrat::RootTable(sq_vm).Bind("ScriptingClass", aClass);
+
+        Engine::Scripting::Bindings::Vector3::Bind(sq_vm);
+        Engine::Scripting::Bindings::Transform::Bind(sq_vm);
+        Engine::Scripting::Bindings::RenderCamera::Bind(sq_vm);
+        Engine::Scripting::Bindings::GameObject::Bind(sq_vm);
+        Engine::Scripting::Bindings::Game::Bind(sq_vm);
+        Engine::Scripting::Bindings::HUD::Bind(sq_vm);
     
-    sqstd_dofile(sq_vm, "script.nut",true,true); 
+
+    sqstd_dofile(sq_vm, "script.nut",true,true);
     
+}
+void Engine::Scripting::Run(const char* script){
+        sqstd_dofile(sq_vm, script, true, true);
 }
 
 void Engine::Scripting::Terminate(){

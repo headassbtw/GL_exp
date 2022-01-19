@@ -2,18 +2,24 @@
 #include "rendering/Camera.hpp"
 #include <glm/fwd.hpp>
 #include <vector>
+#include <deque>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <object/GameObject.hpp>
 namespace Engine{
     
-    struct Game{
+    class Game{
+        public: 
         GLFWwindow* window;
         float Width;
         float Height;
+        float InputThreadMs;
+        float RenderThreadMs;
+        float ScriptThreadMs;
         bool RenderSkybox = true;
         bool RenderAxisHelper = true;
         Render::Camera Camera;
+        std::deque<std::string> Errors;
         void ResizeCallback(GLFWwindow* window, int width, int height);
         private:
         std::vector<glm::vec3> _vertexBuffer;

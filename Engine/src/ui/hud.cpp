@@ -201,6 +201,9 @@ void HUD::Render(){
 
 	glDisableVertexAttribArray(3);
 	glDisableVertexAttribArray(4);
+	
+}
+void HUD::Clear(){
 	t_vertices.clear();
 	t_UVs.clear();
 	Sprites.clear();
@@ -213,4 +216,10 @@ void HUD::Cleanup(){
 	glDeleteTextures(1, &Text2DTextureID);
 
 	glDeleteProgram(Text2DShaderID);
+}
+int HUD::CountElements(){
+	int rtn = 0;
+	rtn += Sprites.size();
+	rtn += Texts.size();
+	return rtn;
 }
