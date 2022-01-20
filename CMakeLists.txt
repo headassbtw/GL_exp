@@ -4,7 +4,7 @@ project(gl_exp)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules/)
 
-find_package(GLFW REQUIRED)
+find_package(SDL2 REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
 
@@ -28,4 +28,4 @@ add_executable(gl_exp ${SRC})
 add_link_options(Engine SHARED)
 add_link_options(squirrel SHARED)
 
-target_link_libraries(gl_exp Engine squirrel sqstdlib pthread glfw OpenGL ${GLFW_LIBRARIES} GLEW)
+target_link_libraries(gl_exp Engine SDL2 squirrel sqstdlib pthread OpenGL ${GLFW_LIBRARIES} GLEW)

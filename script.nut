@@ -7,7 +7,14 @@ path to the texture
 path to the shader
 
 after creating you must use EngineSpawn.Register() to add it to the vertex buffer and render queue
+
+Constants.GetGame() returns the Engine::Game instance, but does not live update because idk squirrel moment
+it will quickly fuck up your day if you repeatedly call it
+
+
+
 */
+
 run <- 0;
 local lit_shader = "content/shaders/frag_lit.glsl";
 local unlit_shader = "content/shaders/frag_unlit.glsl";

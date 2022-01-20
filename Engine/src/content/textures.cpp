@@ -1,10 +1,12 @@
+#include "content/filesystem.hpp"
 #include <content/textures.hpp>
 #include <GL/gl.h>
+#include "Game.hpp"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <map>
-std::map<const char*, GLuint> TextureStore;
+std::map<std::string, GLuint> TextureStore;
 
 
 #define FOURCC_DXT1 0x31545844 // Equivalent to "DXT1" in ASCII
@@ -121,19 +123,24 @@ GLuint Engine::Filesystem::Textures::LoadSauce(){
 }
 
 GLuint Engine::Filesystem::Textures::LoadDDS(const char *path){
+	
 	if(TextureStore.contains(path)){
 		return TextureStore[path];
 	}
+	if (!Engine::Filesystem::Exists(path)) {
+		return MissingFallback;
+	}
+	printf("loading texture \"%s\"\n",path);
 
 
     unsigned char header[124];
-	printf("loading texture \"%s\"\n",path);
 	FILE *fp; 
  
 	/* try to open the file */ 
 	fp = fopen(path, "rb"); 
 	if (fp == NULL){
 		fprintf(stderr,"%s could not be opened\n", path);
+		TextureStore[path] = MissingFallback;
 		return MissingFallback;
 	}
    
@@ -142,6 +149,7 @@ GLuint Engine::Filesystem::Textures::LoadDDS(const char *path){
 	fread(filecode, 1, 4, fp); 
 	if (strncmp(filecode, "DDS ", 4) != 0) { 
 		fclose(fp); 
+		TextureStore[path] = MissingFallback;
 		return MissingFallback; 
 	}
 	
@@ -215,7 +223,10 @@ GLuint Engine::Filesystem::Textures::LoadDDS(const char *path){
     glGenerateMipmap(GL_TEXTURE_2D);
 
 	free(buffer); 
+	
 	TextureStore[path] = textureID;
+	TextureStore.at(path) = textureID;
 	printf("loaded texture in slot %u\n",textureID);
+	Game::LoadedTextures = TextureStore.size();
 	return textureID;
 }

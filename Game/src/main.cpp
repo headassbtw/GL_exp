@@ -1,5 +1,11 @@
 #include <GL/glew.h>
 #include <GL/gl.h>
+#include <SDL2/SDL_events.h>
+#include <SDL2/SDL_keyboard.h>
+#include <SDL2/SDL_keycode.h>
+#include <SDL2/SDL_mouse.h>
+#include <SDL2/SDL_scancode.h>
+#include <cstdio>
 #include <ui/hud.hpp>
 #include <Game.hpp>
 #include <content/filesystem.hpp>
@@ -8,7 +14,6 @@
 #include <object/Transform.hpp>
 #include <rendering/Shader.hpp>
 #include <scripting/squirrel.hpp>
-#include <GLFW/glfw3.h>
 #include <glm/common.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
@@ -35,7 +40,7 @@ float verticalAngle = 0.0f;
 // Initial Field of View
 float initialFoV = 90.0f;
 
-float speed = 3.0f; // 3 units / second
+float speed = 0.0005f;
 float mouseSpeed = 0.005f;
 
 float verticalMax = glm::radians(89.99f);
@@ -46,23 +51,17 @@ bool capturing = true;
 
 
 void computeMatricesFromInputs(){
-
-	// glfwGetTime is called only once, the first time this function is called
-	static double lastTime = glfwGetTime();
-
-	// Compute time difference between current and last frame
-	double currentTime = glfwGetTime();
-	float deltaTime = float(currentTime - lastTime);
 	
-	std::this_thread::sleep_for(std::chrono::nanoseconds(3)); //lmao
-	
-
-	// Get mouse position
-	double xpos, ypos;
+	int xpos, ypos;
+	xpos = 800;
+	ypos = 450;
 	if(capturing){
-		glfwGetCursorPos(game.window, &xpos, &ypos);
-		
-		glfwSetCursorPos(game.window, game.Width/2, game.Height/2);
+		SDL_ShowCursor(SDL_DISABLE);
+		SDL_GetMouseState(&xpos, &ypos);
+		SDL_WarpMouseInWindow(game.window, game.Width/2, game.Height/2);
+	}
+	else{
+		SDL_ShowCursor(SDL_ENABLE);
 	}
 
 	
@@ -88,38 +87,61 @@ void computeMatricesFromInputs(){
 	
 	glm::vec3 up = glm::cross( right, direction );
 
-	
-	if (glfwGetKey( game.window, GLFW_KEY_W ) == GLFW_PRESS){
-		position += direction * deltaTime * speed;
-	}
-	
-	if (glfwGetKey( game.window, GLFW_KEY_S ) == GLFW_PRESS){
-		position -= direction * deltaTime * speed;
-	}
-	
-	if (glfwGetKey( game.window, GLFW_KEY_D ) == GLFW_PRESS){
-		position += right * deltaTime * speed;
-	}
-	
-	if (glfwGetKey( game.window, GLFW_KEY_A ) == GLFW_PRESS){
-		position -= right * deltaTime * speed;
-	}
+	SDL_Event event;
+        while (SDL_PollEvent(&event))
+        {      
+            switch(event.type){
+				
+                case SDL_QUIT:
+                    game.running = false;
+                break;
+                case SDL_KEYDOWN:
+                    switch(event.key.keysym.sym){
+                        case SDL_KeyCode::SDLK_ESCAPE:
+							game.running = false;
+                        break;
+						case SDL_KeyCode::SDLK_BACKQUOTE:
+							capturing = !capturing;
+                        break;
+						case SDL_KeyCode::SDLK_z:
+							game.wireframe = !game.wireframe;
+                        break;
+                    }
+                break;
+            }
+        }
+	auto state = const_cast <Uint8*> (SDL_GetKeyboardState(NULL));
 
-	if (glfwGetKey( game.window, GLFW_KEY_GRAVE_ACCENT ) == GLFW_PRESS){
-		glfwSetInputMode(game.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-		capturing = false;
-		
+    if(state[SDLK_SPACE]){
+		printf("W\n");
 	}
-	else{
-		
-		glfwSetInputMode(game.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-		capturing = true;
+	float mspeed = speed;
+	if(state[SDL_SCANCODE_LSHIFT]){
+		mspeed = speed * 3;
 	}
-    //game.Objects[0].transform.Position = position;
-    //game.Objects[1].transform.Position = position + (direction * glm::vec3(1.5f));
+    if(state[SDL_SCANCODE_W])
+    {
+		position += direction * game.RenderThreadMs * mspeed;
+    }
+    if(state[SDL_SCANCODE_A])
+    {
+		position -= right * game.RenderThreadMs * mspeed;
+    }
+    if(state[SDL_SCANCODE_S])
+    {
+		position -= direction * game.RenderThreadMs * mspeed;
+    }
+    if(state[SDL_SCANCODE_D])
+    {
+		position += right * game.RenderThreadMs * mspeed;
+    }
+
+	
+
+
+
 	game.Camera.Position = position;
 	game.Camera.Rotation = direction;
-	lastTime = currentTime;
 }
 
 
@@ -129,11 +151,10 @@ void input(){
 		auto start = std::chrono::high_resolution_clock::now();
         computeMatricesFromInputs();
 		auto finish = std::chrono::high_resolution_clock::now();
-		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(finish-start);
-		game.InputThreadMs = ms.count();
+		auto ms = std::chrono::duration_cast<std::chrono::microseconds>(finish-start);
+		game.InputThreadMs = (float)ms.count()/1000;
     }
-    while( glfwGetKey(game.window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
-            glfwWindowShouldClose(game.window) == 0 );
+    while(game.running);
 }
 void meshupdate(){
 	
@@ -142,25 +163,19 @@ void meshupdate(){
 			game.Errors.pop_back();
 		std::this_thread::sleep_for(std::chrono::seconds(3));
     }
-    while( glfwGetKey(game.window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
-            glfwWindowShouldClose(game.window) == 0 );
+    while(game.running);
 }
 void squirrelupdate(){
 	
 	auto start = std::chrono::high_resolution_clock::now();
 	Engine::Scripting::Run("update.nut");
 	auto finish = std::chrono::high_resolution_clock::now();
-	auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(finish-start);
-	game.ScriptThreadMs = ms.count();
+	auto ms = std::chrono::duration_cast<std::chrono::microseconds>(finish-start);
+	game.ScriptThreadMs = (float)ms.count()/1000;
 }
 
 int main(){
 
-	if(glfwRawMouseMotionSupported()){
-		printf("Raw mouse supported\n");
-		glfwSetInputMode(game.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-		glfwSetInputMode(game.window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-	}
 
 	HUD::Init("content/textures/font.dds");
 	Engine::Scripting::Run(game);
@@ -174,26 +189,25 @@ int main(){
 	game.Objects[0].mesh.FlagForUpdate();
 	std::thread mesh_update_thread(meshupdate);
 	
-	
 
 
 	
 
 	
     do{
+		//meshupdate();
 		squirrelupdate();
 		auto start = std::chrono::high_resolution_clock::now();
         game.Render(); 
 		auto finish = std::chrono::high_resolution_clock::now();
-		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(finish-start);
-		game.RenderThreadMs = ms.count();
+		auto ms = std::chrono::duration_cast<std::chrono::microseconds>(finish-start);
+		game.RenderThreadMs = (float)ms.count()/1000;
     }
-    while( glfwGetKey(game.window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
-            glfwWindowShouldClose(game.window) == 0 );
+    while(game.running);
 	input_thread.join();
 	mesh_update_thread.join();
+	game.Terminate();
     Engine::Scripting::Terminate();
-    std::cout << "hi from game" << std::endl;
     return 0;
 }
 

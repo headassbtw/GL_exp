@@ -3,6 +3,7 @@
 namespace Engine{
     namespace Render{
         namespace Shaders{
+            void ClearAll();
             GLuint CompileFrag(const char *path);
             GLuint CompileVert(const char *path);
             GLuint GetFrag(const char *path);

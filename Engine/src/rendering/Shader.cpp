@@ -1,11 +1,16 @@
-#include "content/filesystem.hpp"
+#include <content/filesystem.hpp>
 #include <rendering/Shader.hpp>
 #include <string>
 #include <map>
+#include <Game.hpp>
 std::map<const char*, GLuint> FragStore;
 std::map<const char*, GLuint> VertStore;
 std::map<const char*, GLuint> ProgStore;
 GLint log_length, success;
+
+void Engine::Render::Shaders::ClearAll(){
+}
+
 GLuint Engine::Render::Shaders::CompileFrag(const char *path){
     GLuint rtnShader;
     std::string ShaderSource = Engine::Filesystem::Text(path);
@@ -95,5 +100,6 @@ GLuint Engine::Render::Shaders::GetShaders(const char* vert,const char* frag){
     if(!ProgStore.contains(frag)){
         ProgStore[frag] = CompileShaders(GetVert(vert), GetFrag(frag));
     }
+    Engine::Game::LoadedShaders = ProgStore.size();
     return ProgStore[frag];
 }

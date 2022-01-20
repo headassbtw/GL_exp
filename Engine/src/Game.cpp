@@ -1,5 +1,6 @@
+#include <SDL2/SDL_hints.h>
+#include <SDL2/SDL_video.h>
 #include <content/filesystem.hpp>
-
 #include "rendering/Camera.hpp"
 #include "rendering/Shader.hpp"
 #include "object/GameObject.hpp"
@@ -10,7 +11,6 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <GLFW/glfw3.h>
 #include <controls.hpp>
 #include <Game.hpp>
 #include <string>
@@ -30,6 +30,9 @@ GLuint TextureID;
 GLuint LightID;
 
 GLuint VertPos;
+
+int Game::LoadedTextures;
+int Game::LoadedShaders;
 
 glm::vec3 lightPos = glm::vec3(4,4,4);
 std::vector<Engine::GameObject> ShaderSorted;
@@ -69,11 +72,6 @@ void SetShader(GLuint programID){
 	lastshader = programID;
 }
 
-void Engine::Game::ResizeCallback(GLFWwindow* window, int width, int height){
-	glViewport(0, 0, width, height);
-	printf("Resized to: %dx%d\n",width,height);
-}
-
 bool HigherLayer(Engine::GameObject g, Engine::GameObject gg){
 	return g.layer > gg.layer;
 }
@@ -91,50 +89,34 @@ Engine::GameObject Engine::Game::Find(const char* name){
 	}
 }
 Engine::Game::Game(){} //NEVER USE THIS
+
+SDL_GLContext gl_context;
 Engine::Game::Game(const char* title, int width, int height){
 	Camera = Render::Camera();
 	Height = height;
 	Width = width;
-    if( !glfwInit() )
-	{
-		fprintf( stderr, "Failed to initialize GLFW\n" );
-		getchar();
-	}
 
-	glfwWindowHint(GLFW_SAMPLES, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-	// Open a window and create its OpenGL context
-	window = glfwCreateWindow( width, height, title, NULL, NULL);
-	if( window == NULL ){
-		fprintf( stderr, "Failed to open GLFW window. Make sure your GPU supports OpenGL 3.3 or above.\n" );
-		getchar();
-		glfwTerminate();
-	}
-	glfwMakeContextCurrent(window);
+	if(SDL_Init(SDL_INIT_VIDEO) < 0){
+        fprintf(stderr, "Failed to initialize SDL2: %s\n", SDL_GetError());
+    }
 	
+	SDL_CreateWindowAndRenderer(Width, Height, 0, &window, &renderer);
+    if (window == NULL) {
+    fprintf(stderr, "could not create window: %s\n", SDL_GetError());
+    }
+    gl_context = SDL_GL_CreateContext(window);
 	glewExperimental = true;
 	if (glewInit() != GLEW_OK) {
 		fprintf(stderr, "Failed to initialize GLEW\n");
 		getchar();
-		glfwTerminate();
 	}
-
-	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
-
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    
-    glfwPollEvents();
-    glfwSetCursorPos(window, Width/2, Height/2);
+	
+	renderer = SDL_GetRenderer(window);
+    SDL_SetWindowTitle(window, title);
+    surface = SDL_GetWindowSurface(window);
 
 	glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
-
-	// Enable depth test
 	glEnable(GL_DEPTH_TEST);
-	// Accept fragment if it closer to the camera than the former one
 	glDepthFunc(GL_LESS); 
 
 	
@@ -232,8 +214,6 @@ void Engine::Game::DrawObject(int object,glm::mat4& modelmatrix, glm::mat4& mvp)
 	glDrawArrays(GL_TRIANGLES, Objects[object].mesh.vbuffer_start, Objects[object].mesh.vbuffer_end - Objects[object].mesh.vbuffer_start);
 }
 
-bool wireframe = false;
-
 int Engine::Game::Render()
 {
 	struct {
@@ -242,7 +222,7 @@ int Engine::Game::Render()
 
 
 	std::sort(Objects.begin(), Objects.end(), customLess);
-	glfwPollEvents();
+	//glfwPollEvents();
 	glPolygonMode(GL_FRONT_AND_BACK, wireframe ?GL_LINE : GL_FILL);
 	glClear(GL_DEPTH_BUFFER_BIT | wireframe ? GL_COLOR_BUFFER_BIT : GL_DEPTH_BUFFER_BIT);
 		
@@ -369,20 +349,21 @@ int Engine::Game::Render()
 
 		HUD::Render();
 		
-
-		glfwSwapBuffers(window);
+		SDL_GL_SwapWindow(window);
+		//glfwSwapBuffers(window);
 		
 }
 
-void Terminate(){
+void Engine::Game::Terminate(){
 	HUD::Cleanup();
 	glDeleteBuffers(1, &vertexbuffer);
 	glDeleteBuffers(1, &uvbuffer);
 	glDeleteBuffers(1, &normalbuffer);
-	//glDeleteProgram(programID);
-	//glDeleteTextures(1, &Texture);
-	glDeleteVertexArrays(1, &VertexArrayID);
 
-	// Close OpenGL window and terminate GLFW
-	glfwTerminate();
+	
+
+	glDeleteVertexArrays(1, &VertexArrayID);
+	SDL_GL_DeleteContext(gl_context);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 }
