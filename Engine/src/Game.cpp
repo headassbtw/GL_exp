@@ -318,33 +318,13 @@ int Engine::Game::Render()
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
 
-		std::string POS;
-		POS += "Pos: (";
-		POS += std::to_string(Camera.Position.x);
-		POS += ",";
-		POS += std::to_string(Camera.Position.y);
-		POS += ",";
-		POS += std::to_string(Camera.Position.z);
-		POS += ")";
-		std::string ROT;
-		ROT += "Rot: (";
-		ROT += std::to_string(Camera.Rotation.x);
-		ROT += ",";
-		ROT += std::to_string(Camera.Rotation.y);
-		ROT += ",";
-		ROT += std::to_string(Camera.Rotation.z);
-		ROT += ")";
-		std::string objcount;
-		objcount += std::to_string(Objects.size());
-		objcount += " Objects";
-
 		
 		//HUD::PushText("Alpha Build", 1200, 50, 30);
 		/*HUD::PushText(POS.c_str(), 0, 900, 20);
 		HUD::PushText(ROT.c_str(), 0, 880, 20);
 		HUD::PushText(objcount.c_str(), 0, 860, 20);*/
 		if(Errors.size() > 0){
-			HUD::PushText("Something is creating script errors", 0, 0, 20);
+			//HUD::CreateText("Something is creating script errors", 0, 0, 20);
 		}
 
 		HUD::Render();

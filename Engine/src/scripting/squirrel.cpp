@@ -1,4 +1,4 @@
-#include <scripting/bindings/vec3.hpp>
+#include <scripting/bindings/vector.hpp>
 #include <scripting/bindings/transform.hpp>
 #include <scripting/bindings/rendercamera.hpp>
 #include <scripting/bindings/gameobject.hpp>
@@ -35,17 +35,17 @@ void printfunc(HSQUIRRELVM v, const SQChar *s,...)
         } 
 
 void errfunc(HSQUIRRELVM v, const SQChar *s,...) 
-        {
-            va_list listargs;
-            va_start(listargs, s);
+{
+        va_list listargs;
+        va_start(listargs, s);
 
-            const char* ass = va_arg(listargs, const char*);
-                std::string err = std::string("[ERROR] ");
-                err += ass;
-                printf("%s\n", err.c_str()); 
-                help->Errors.push_front(err);
-                va_end(listargs);
-        } 
+        const char* ass = va_arg(listargs, const char*);
+        std::string err = std::string("[ERROR] ");
+        err += ass;
+        printf("%s\n", err.c_str()); 
+        help->Errors.push_front(err);
+        va_end(listargs);
+}
 
 SQInteger register_global_func(HSQUIRRELVM v,SQFUNCTION f,const char *fname)
  {
@@ -100,6 +100,22 @@ int shadercount(){
 std::string updatescript(){
         return help->UpdateScript;
 }
+void run(const char* scriptpath){
+        sqstd_dofile(sq_vm, scriptpath,true,true);
+}
+class testclass{
+        public:
+        int one;
+        int two;
+};
+
+testclass hir(){
+        auto a = testclass();
+        a.one = 1;
+        a.two = 2;
+        return a;
+}
+
 int renderms(){return help->RenderThreadMs;}
 int inputms(){return help->InputThreadMs;}
 int scriptms(){return help->ScriptThreadMs;}
@@ -108,17 +124,24 @@ Engine::Render::Camera cam(){return help->Camera;}
 void Engine::Scripting::Run(Engine::Game& game){
 
     help = &game;
-    sq_vm = sq_open(8192);
+    sq_vm = sq_open(1024);
     sq_setprintfunc(sq_vm, printfunc, errfunc);
     sq_seterrorhandler(sq_vm);
     Sqrat::DefaultVM::Set(sq_vm);
     
-
-
+        
         sq_pushroottable(sq_vm);
 
+        Sqrat::Class<testclass> testC(sq_vm,"Test");
+        testC.Var("one", &testclass::one);
+        Sqrat::RootTable(sq_vm).Bind("Test", testC);
+
+        Sqrat::Table utilsTable(sq_vm);
+        utilsTable.Func("Run", &run);
+        utilsTable.Func("hir", &hir);
+        Sqrat::RootTable(sq_vm).Bind("Utils", utilsTable);
+
         Sqrat::Table aTable(sq_vm);
-        
         aTable.Func("GetGame", &hi);
         aTable.Func("UpdateScript", &updatescript);
         aTable.Func("LoadedTextures", &texturecount);
@@ -127,17 +150,14 @@ void Engine::Scripting::Run(Engine::Game& game){
         aTable.Func("InputThreadMs", &inputms);
         aTable.Func("ScriptThreadMs", &scriptms);
         aTable.Func("Camera", &cam);
-        
         Sqrat::RootTable(sq_vm).Bind("Constants", aTable);
-
+        
         Sqrat::Class<EngineSpawn> eClass(sq_vm, "EngineSpawn");
-
         eClass.Func("Spawn", &EngineSpawn::Spawn);
         eClass.Func("Register", &EngineSpawn::Register);
-
         Sqrat::RootTable(sq_vm).Bind("EngineSpawn", eClass);
 
-        Engine::Scripting::Bindings::Vector3::Bind(sq_vm);
+        Engine::Scripting::Bindings::Vector::Bind(sq_vm);
         Engine::Scripting::Bindings::Transform::Bind(sq_vm);
         Engine::Scripting::Bindings::RenderCamera::Bind(sq_vm);
         Engine::Scripting::Bindings::GameObject::Bind(sq_vm);

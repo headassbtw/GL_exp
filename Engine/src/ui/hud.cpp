@@ -3,6 +3,7 @@
 #include "content/textures.hpp"
 #include "rendering/Shader.hpp"
 #include "ui/elements.hpp"
+#include <algorithm>
 #include <cstring>
 #include <ui/hud.hpp>
 #include <cstdio>
@@ -24,20 +25,12 @@ GLuint MVP_ID;
 std::vector<glm::vec2> t_vertices;
 std::vector<glm::vec2> t_UVs;
 
-std::vector<Sprite> Sprites;
-std::vector<Text> Texts;
+std::vector<Sprite*> Sprites;
+std::vector<Text*> Texts;
 
 
 const float px_x = 800.0f;
 const float px_y = 450.0f;
-
-
-void HUD::Add(Sprite sprite){
-	Sprites.push_back(sprite);
-}
-void HUD::Add(Text text){
-	Texts.push_back(text);
-}
 
 
 void HUD::Init(const char * texturePath){
@@ -127,26 +120,39 @@ void HUD::Print(const char * text, int x, int y, int size){
 	}
 	
 }
-void HUD::PushSprite(const char* sprite, float x, float y, float w, float h){
-	Sprite a = Sprite(sprite,x,y,w,h);
-	Sprites.push_back(a);
+Sprite HUD::CreateSprite(const char* sprite, float x, float y, float w, float h){
+	Sprite s = Sprite(sprite,x,y,w,h);
+	Sprites.push_back(&s);
+	return s;
 }
 
-void HUD::PushText(const char * text, int x, int y, int size){
-	Text a = Text("content/textures/font.dds", text, x,y,size);
-	Texts.push_back(a);
+Text HUD::CreateText(const char * text, int x, int y, int size){
+	Text t = Text("content/textures/font.dds", text, x,y,size);
+	Texts.push_back(&t);
+	return t;
+}
+
+void HUD::DestroySprite(Sprite sprite){
+	auto it = std::find(Sprites.begin(), Sprites.end(), &sprite);
+	Sprites.erase(it);
+}
+void HUD::DestroyText(Text text){
+	auto it = std::find(Texts.begin(), Texts.end(), &text);
+	Texts.erase(it);
 }
 
 
 void HUD::Render(){
+	t_vertices.clear();
+	t_UVs.clear();
 	for(int i = 0; i < Sprites.size();i++){
-		auto* spr = &Sprites[i];
+		auto spr = Sprites[i];
 		spr->vert_idx = t_vertices.size();
 		Square(spr->Position.x, spr->Position.y, spr->Size.x, spr->Size.y);
 		spr->vert_count = t_vertices.size() - spr->vert_idx;
 	}
 	for(int i = 0; i < Texts.size();i++){
-		auto* spr = &Texts[i];
+		auto spr = Texts[i];
 		spr->vert_idx = t_vertices.size();
 		Print(spr->text, spr->Position.x, spr->Position.y, spr->Size);
 		spr->vert_count = t_vertices.size() - spr->vert_idx;
@@ -181,7 +187,7 @@ void HUD::Render(){
 
 	for(int i = 0; i < Sprites.size();i++){
 		glClear(GL_DEPTH_BUFFER_BIT);
-		auto* spr = &Sprites[i];
+		auto spr = Sprites[i];
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, spr->TextureID);
 		glUniform1i(Text2DUniformID, 0);
@@ -189,7 +195,7 @@ void HUD::Render(){
 	}
 	for(int i = 0; i < Texts.size();i++){
 		glClear(GL_DEPTH_BUFFER_BIT);
-		auto* spr = &Texts[i];
+		auto spr = Texts[i];
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, spr->TextureID);
 		glUniform1i(Text2DUniformID, 0);

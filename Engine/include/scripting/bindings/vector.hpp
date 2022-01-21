@@ -6,7 +6,7 @@
 namespace Engine{
     namespace Scripting{
         namespace Bindings{
-            namespace Vector3{
+            namespace Vector{
                 void Bind(HSQUIRRELVM sq_vm);
             }
         }

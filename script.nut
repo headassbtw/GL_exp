@@ -15,20 +15,22 @@ it will quickly fuck up your day if you repeatedly call it
 
 */
 
+
+
 run <- 0;
 local lit_shader = "content/shaders/frag_lit.glsl";
 local unlit_shader = "content/shaders/frag_unlit.glsl";
 spawn <- EngineSpawn();
 game <- Constants.GetGame();
 
-local axis = spawn.Spawn(10,2,"content/models/axis.obj","content/textures/color.dds",unlit_shader);
+//local axis = spawn.Spawn(10,2,"content/models/axis.obj","content/textures/color.dds",unlit_shader);
+//spawn.Register(axis);
 local skybox = spawn.Spawn(-1,1,"content/models/skybox.obj","content/textures/skybox.dds","content/shaders/frag_skybox.glsl");
-spawn.Register(axis);
 spawn.Register(skybox);
 
 
 local obj = spawn.Spawn(0,0,"content/models/scene.obj","content/textures/uvtemplate.dds",lit_shader);
-obj.layer = 3;
+obj.layer = 0;
 obj.transform.Position.y = -0.25;
 
 
@@ -37,6 +39,9 @@ local o1 = spawn.Spawn(0,0,"content/models/cube.obj","",lit_shader);
 local o2 = spawn.Spawn(0,0,"content/models/cube.obj","",lit_shader);
 local o3 = spawn.Spawn(0,0,"content/models/cube.obj","",lit_shader);
 local o4 = spawn.Spawn(0,0,"content/models/cube.obj","",lit_shader);
+
+local fuck = spawn.Spawn(0,0,"content/models/fuck.obj","",unlit_shader);
+spawn.Register(fuck);
 
 o1.transform.Position.x = 2;
 o2.transform.Position.x = 2;
@@ -58,3 +63,7 @@ spawn.Register(o1);
 spawn.Register(o2);
 spawn.Register(o3);
 spawn.Register(o4);
+
+//HUD.CreateText("Testing",0,0,50);
+//Utils.Run("ui.nut");
+HUD.CreateSprite("content/textures/grunt.dds",0,0,2000,2000);

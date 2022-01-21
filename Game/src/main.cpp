@@ -178,24 +178,24 @@ int main(){
 
 
 	HUD::Init("content/textures/font.dds");
-	Engine::Scripting::Run(game);
 	
-	printf("game has %zu objects\n",game.Objects.size());
     game.Camera.FarClip = 3000.0f;
-	game.ProcessMeshes();
 	//Engine::Scripting::GiveGame(game);
 
 	std::thread input_thread(input);
-	game.Objects[0].mesh.FlagForUpdate();
 	std::thread mesh_update_thread(meshupdate);
 	
 
-
+	auto h = HUD::CreateText("Alpha Build", 1200, 50, 30);
+	Engine::Scripting::Run(game);
+	printf("game has %zu objects\n",game.Objects.size());
 	
 
 	
+	game.ProcessMeshes(); //i REALLY need to rework and/or abandon this, it's super static-oriented and not very good
     do{
 		//meshupdate();
+		h.text = std::to_string(game.RenderThreadMs).c_str();
 		squirrelupdate();
 		auto start = std::chrono::high_resolution_clock::now();
         game.Render(); 
